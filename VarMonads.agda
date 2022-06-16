@@ -10,6 +10,10 @@ private
     M V F C K : Set -> Set
     TF : (Set -> Set) -> Set
 
+--------------------------------------------------
+--Unconstrained VarMonads
+--------------------------------------------------
+
 record BaseVarMonad
     (M : Set -> Set)
     (V : Set -> Set) : Set where
@@ -19,14 +23,20 @@ record BaseVarMonad
     write : V A -> A -> M T
     overlap {{mon}} : Monad M
 
+--TODO modify gives extra read!!
+
 record ModifyVarMonad
     (M : Set -> Set)
     (V : Set -> Set) : Set where
   field
     new : A -> M (V A)
     read : V A -> M A
-    modify : V A -> (A -x- B) -> M B
+    modify : V A -> (A -> A -x- B) -> M B
     overlap {{mon}} : Monad M
+
+-------------------------------------------
+--Constrained VarMonads
+-------------------------------------------
 
 record ConstrBaseVarMonad
     (K : Set -> Set)
@@ -45,5 +55,5 @@ record ConstrModifyVarMonad
   field
     new : {{k : K A}} -> A -> M (V A)
     read : {{k : K A}} -> V A -> M A
-    modify : {{k : K A}} -> V A -> (A -x- B) -> M B
+    modify : {{k : K A}} -> V A -> (A -> A -x- B) -> M B
     overlap {{mon}} : Monad M
