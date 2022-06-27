@@ -17,19 +17,10 @@ private
     M V F C K : Set -> Set
     TF : (Set -> Set) -> Set
 
-record Traversable (T : Set -> Set) : Set where
-  field
-    traverse : {{apl : Applicative F}} ->
-      (A -> F B) -> T A -> F (T B)
-    sequenceA : {{apl : Applicative F}} ->
-      T (F A) -> F (T A)
-open Traversable {{...}}
-
 open ConstrBaseVarMonad {{...}}
 
 --seems to have to be an MAlgebra at this point...
 foldBVM : {{bvm : BaseVarMonad M V}} ->
   {{func : Functor F}} ->
-  {{tr : Traversable F}} ->
   Algebra F (M A) -> Fix (F o V) -> M A
 foldBVM {V = V} alg = foldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])
