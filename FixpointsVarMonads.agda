@@ -20,7 +20,8 @@ private
 open ConstrBaseVarMonad {{...}}
 
 --seems to have to be an MAlgebra at this point...
-foldBVM : {{bvm : BaseVarMonad M V}} ->
+foldKBVM : {{bvm : ConstrBaseVarMonad K M V}} ->
   {{func : Functor F}} ->
-  Algebra F (M A) -> Fix (F o V) -> M A
-foldBVM {V = V} alg = foldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])
+  {{kv : forall {R} -> {{kr : K R}} -> K (V R)}} ->
+  KAlgebra K F (M A) -> KFix K (F o V) -> M A
+foldKBVM {V = V} alg = KfoldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])
