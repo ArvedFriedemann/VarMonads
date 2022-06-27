@@ -2,8 +2,8 @@
 module FixpointsVarMonads where
 
 open import AgdaAsciiPrelude.AsciiPrelude
-open import Fixpoints
-open import VarMonads
+open import Fixpoints public
+open import VarMonads public
 
 open import Category.Functor using () renaming (RawFunctor to Functor)
 open Functor {{...}} --renaming (_<$>_ to _<$>'_)
