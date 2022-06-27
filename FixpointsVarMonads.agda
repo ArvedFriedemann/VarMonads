@@ -6,10 +6,10 @@ open import Fixpoints
 open import VarMonads
 
 open import Category.Functor using () renaming (RawFunctor to Functor)
-open Functor {{...}} renaming (_<$>_ to _<$>'_)
+open Functor {{...}} --renaming (_<$>_ to _<$>'_)
 
 open import Category.Applicative using () renaming (RawApplicative to Applicative)
-open Applicative {{...}}
+--open Applicative {{...}}
 
 private
   variable
@@ -28,8 +28,8 @@ open Traversable {{...}}
 open ConstrBaseVarMonad {{...}}
 
 --seems to have to be an MAlgebra at this point...
-foldBVM : {{bvm : ConstrBaseVarMonad K M V}} ->
+foldBVM : {{bvm : BaseVarMonad M V}} ->
   {{func : Functor F}} ->
   {{tr : Traversable F}} ->
-  Algebra F A -> Fix (F o V) -> M A
-foldBVM alg = foldF \ R f [[_]] -> return $ alg {!   !} f {!   !}
+  Algebra F (M A) -> Fix (F o V) -> M A
+foldBVM {V = V} alg = foldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])

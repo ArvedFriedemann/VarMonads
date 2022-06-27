@@ -20,6 +20,3 @@ Fix F = forall A -> Algebra F A -> A
 
 foldF : Algebra F A -> Fix F -> A
 foldF alg f = f _ alg
-
-foldM : MAlgebra M F A -> Fix F -> M A
-foldM = foldF

@@ -51,9 +51,14 @@ record ConstrModifyVarMonad
 --------------------------------------------------
 --TODO do make those separate monads and make a construction from a T constrianed monad
 
+data BVMUnit : Set where
+  bvmunit : BVMUnit
+
+instance
+  bvmunitI = bvmunit
 
 BaseVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
-BaseVarMonad = ConstrBaseVarMonad (const T)
+BaseVarMonad = ConstrBaseVarMonad (const BVMUnit)
 
 ModifyVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
-ModifyVarMonad = ConstrModifyVarMonad (const T)
+ModifyVarMonad = ConstrModifyVarMonad (const BVMUnit)
