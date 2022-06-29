@@ -2,6 +2,7 @@
 module SpecialVarMonads where
 
 open import AgdaAsciiPrelude.AsciiPrelude
+open import VarMonads public
 
 private
   variable
