@@ -4,6 +4,7 @@ module FixpointsVarMonads where
 open import AgdaAsciiPrelude.AsciiPrelude
 open import Fixpoints public
 open import VarMonads public
+open import ConstraintProperties
 
 open import Category.Functor using () renaming (RawFunctor to Functor)
 open Functor {{...}} --renaming (_<$>_ to _<$>'_)
@@ -22,6 +23,6 @@ open ConstrBaseVarMonad {{...}}
 --seems to have to be an MAlgebra at this point...
 foldKBVM : {{bvm : ConstrBaseVarMonad K M V}} ->
   {{func : Functor F}} ->
-  {{kv : forall {R} -> {{kr : K R}} -> K (V R)}} ->
+  {{ConservesVar K V}} ->
   KAlgebra K F (M A) -> KFix K (F o V) -> M A
 foldKBVM {V = V} alg = KfoldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])
