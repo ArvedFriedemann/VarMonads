@@ -7,7 +7,7 @@ open import VarMonads public
 open import ConstraintProperties
 
 open import Category.Functor using () renaming (RawFunctor to Functor)
-open Functor {{...}} --renaming (_<$>_ to _<$>'_)
+open Functor {{...}}
 
 open import Category.Applicative using () renaming (RawApplicative to Applicative)
 --open Applicative {{...}}
@@ -20,7 +20,6 @@ private
 
 open ConstrBaseVarMonad {{...}}
 
---seems to have to be an MAlgebra at this point...
 foldKBVM : {{bvm : ConstrBaseVarMonad K M V}} ->
   {{func : Functor F}} ->
   {{ConservesVar K V}} ->

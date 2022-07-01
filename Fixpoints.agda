@@ -3,6 +3,9 @@ module Fixpoints where
 
 open import AgdaAsciiPrelude.AsciiPrelude
 
+open import Category.Functor using () renaming (RawFunctor to Functor)
+open Functor {{...}} renaming (_<$>_ to _<$>'_)
+
 private
   variable
     A B S : Set
@@ -17,6 +20,9 @@ Fix F = forall A -> Algebra F A -> A
 
 foldF : Algebra F A -> Fix F -> A
 foldF alg f = f _ alg
+
+In : {{func : Functor F}} -> F (Fix F) -> Fix F
+In f A alg = alg _ (foldF alg <$>' f) id
 
 KAlgebra : (K : Set -> Set) -> (F : Set -> Set) -> (A : Set) -> Set
 KAlgebra K F A = forall R -> {{k : K R}} -> F R -> (R -> A) -> A
