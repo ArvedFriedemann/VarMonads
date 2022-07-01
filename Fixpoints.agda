@@ -24,6 +24,9 @@ foldF alg f = f _ alg
 In : {{func : Functor F}} -> F (Fix F) -> Fix F
 In f A alg = alg _ (foldF alg <$>' f) id
 
+Ex : {{func : Functor F}} -> Fix F -> F (Fix F)
+Ex = foldF \ R f [[_]] -> In o [[_]] <$>' f
+
 KAlgebra : (K : Set -> Set) -> (F : Set -> Set) -> (A : Set) -> Set
 KAlgebra K F A = forall R -> {{k : K R}} -> F R -> (R -> A) -> A
 

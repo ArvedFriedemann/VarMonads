@@ -22,6 +22,6 @@ open ConstrBaseVarMonad {{...}}
 
 foldKBVM : {{bvm : ConstrBaseVarMonad K M V}} ->
   {{func : Functor F}} ->
-  {{ConservesVar K V}} ->
+  {{cv : ConservesVar K V}} ->
   KAlgebra K F (M A) -> KFix K (F o V) -> M A
 foldKBVM {V = V} alg = KfoldF \ R f [[_]] -> alg (V R) f (read >=> [[_]])
