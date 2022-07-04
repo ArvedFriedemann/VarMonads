@@ -35,3 +35,6 @@ KFix K F = forall A -> KAlgebra K F A -> A
 
 KfoldF : KAlgebra K F A -> KFix K F -> A
 KfoldF alg f = f _ alg
+
+KIn : {{k : K (KFix K F)}} -> F (KFix K F) -> KFix K F
+KIn f A alg = alg _ f (KfoldF alg)
