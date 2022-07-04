@@ -21,8 +21,8 @@ Fix F = forall A -> Algebra F A -> A
 foldF : Algebra F A -> Fix F -> A
 foldF alg f = f _ alg
 
-In : {{func : Functor F}} -> F (Fix F) -> Fix F
-In f A alg = alg _ (foldF alg <$>' f) id
+In : F (Fix F) -> Fix F
+In f A alg = alg _ f (foldF alg)
 
 Ex : {{func : Functor F}} -> Fix F -> F (Fix F)
 Ex = foldF \ R f [[_]] -> In o [[_]] <$>' f
