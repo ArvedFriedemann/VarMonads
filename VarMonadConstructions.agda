@@ -25,10 +25,11 @@ ConstrProdConstr :
     ConstrSpecVarMonad K M (RecTupPtr K V F) (F (RecTupPtr K V F))
 ConstrProdConstr femp cbvm =
   (record {
-    new = \ v -> new (v , {!!}) ;
-    read = {!   !} ;
-    write = {!   !} }) ,
+    new = \ v -> new (v , KIn femp) ;
+    read = \ p -> fst <$> read p ;
+    write = \ p v -> read p >>= \ (_ , y) -> write p (v , y) }) ,
   (record {
-    read = {!   !} ;
-    write = {!   !} })
+    --TODO Problem: this needs ExM constructor. TODO: get completely rid of it.
+    read = \ p -> {!!} o snd <$> read p ;
+    write = \ p x -> read p >>= \ (v , _) -> write p (v , KIn x ) })
   where open ConstrBaseVarMonad cbvm

@@ -32,4 +32,4 @@ record ConstrSpecVarMonad
     (B : Set) : Set where
   field
     read : {{k : K A}} -> V A -> M B
-    write : {{k : K A}} -> V A -> B -> M B
+    write : {{k : K A}} -> V A -> B -> M T
