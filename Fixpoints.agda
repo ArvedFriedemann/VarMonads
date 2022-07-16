@@ -38,6 +38,3 @@ KfoldF alg f = f _ alg
 
 KIn : {{k : K (KFix K F)}} -> F (KFix K F) -> KFix K F
 KIn f A alg = alg _ f (KfoldF alg)
-
-KEx : KFix K F -> F (KFix K F)
-KEx = KfoldF \ R f [[_]] -> {!   !}
