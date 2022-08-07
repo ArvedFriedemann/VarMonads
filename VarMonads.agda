@@ -26,14 +26,16 @@ record ConstrBaseVarMonad
 
 
 --TODO modify gives extra read!!
-
+-- NOTE : modify varmonads are just implementation detail.
+--BaseVarMonad given to the user (and only that is constrained by lattices) 
 record ConstrModifyVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
     (V : Set -> Set) : Set where
   field
     new : {{k : K A}} -> A -> M (V A)
-    modify : {{k : K A}} -> V A -> (A -> A -x- B) -> M B
+    --write : {{k : K A}} -> V A -> A -> M T
+    modify : {{k : K A}} -> V A -> (\ A -> A -x- B) -> M B
     overlap {{mon}} : Monad M
 
   read : {{k : K A}} -> V A -> M A
@@ -41,6 +43,8 @@ record ConstrModifyVarMonad
 
   modify' : {{k : K A}} -> V A -> (A -> A) -> M T
   modify' p f = modify p \ x -> f x , tt
+
+  write p v = modify p (Right (v -x- T))
 
   write : {{k : K A}} -> V A -> A -> M T
   write p v = modify' p (const v)

@@ -38,3 +38,10 @@ KfoldF alg f = f _ alg
 
 KIn : {{k : K (KFix K F)}} -> F (KFix K F) -> KFix K F
 KIn f A alg = alg _ f (KfoldF alg)
+
+KfixBinOp : {{func : Functor F}} ->
+  {{k : K (KFix K F) }} ->
+  (F (KFix K F) -> F (KFix K F) -> F (KFix K F)) -> KFix K F -> KFix K F -> KFix K F
+KfixBinOp merge f1 f2 = flip KfoldF f1 (\ R f1' [[_]]1 ->
+                        flip KfoldF f2 (\ S f2' [[_]]2 -> KIn $ merge ([[_]]1 <$>' f1') ([[_]]2 <$>' f2'))
+                        )
