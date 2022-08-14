@@ -34,8 +34,8 @@ record ConstrModifyVarMonad
     (V : Set -> Set) : Set where
   field
     new : {{k : K A}} -> A -> M (V A)
-    --write : {{k : K A}} -> V A -> A -> M T
-    modify : {{k : K A}} -> V A -> (\ A -> A -x- B) -> M B
+    -- write : {{k : K A}} -> V A -> A -> M T
+    modify : {{k : K A}} -> V A -> (A -> A -x- B) -> M B
     overlap {{mon}} : Monad M
 
   read : {{k : K A}} -> V A -> M A
@@ -46,6 +46,30 @@ record ConstrModifyVarMonad
 
   write : {{k : K A}} -> V A -> A -> M T
   write p v = modify' p (const v)
+
+--------------------------------------------------
+--Unconstrained VarMonads
+--------------------------------------------------
+--TODO do make those separate monads and make a construction from a T constrianed monad
+
+data BVMUnit : Set where
+  bvmunit : BVMUnit
+
+instance
+  bvmunitI = bvmunit
+
+BaseVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
+BaseVarMonad = ConstrBaseVarMonad (const BVMUnit)
+
+ModifyVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
+ModifyVarMonad = ConstrModifyVarMonad (const BVMUnit)
+
+
+
+
+
+
+{-
 
 ma <|> mb
 
@@ -102,19 +126,4 @@ case lst of
   [] -> ...
   x :: xs -> ...
 
---------------------------------------------------
---Unconstrained VarMonads
---------------------------------------------------
---TODO do make those separate monads and make a construction from a T constrianed monad
-
-data BVMUnit : Set where
-  bvmunit : BVMUnit
-
-instance
-  bvmunitI = bvmunit
-
-BaseVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
-BaseVarMonad = ConstrBaseVarMonad (const BVMUnit)
-
-ModifyVarMonad : (M : Set -> Set) -> (V : Set -> Set) -> Set
-ModifyVarMonad = ConstrModifyVarMonad (const BVMUnit)
+-}
