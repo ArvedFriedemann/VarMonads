@@ -3,11 +3,12 @@ module BasicVarMonads.BaseVarMonad where
 
 open import AgdaAsciiPrelude.AsciiPrelude
 
-variable
-  A B : Set
-  a a' : A
-  b : B
-  M V : Set -> Set
+private 
+  variable
+    A B : Set
+    a a' : A
+    b : B
+    M V : Set -> Set
 
 record BaseVarMonad (M : Set -> Set) (V : Set -> Set) : Set where
   field

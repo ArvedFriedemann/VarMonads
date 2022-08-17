@@ -4,9 +4,10 @@ module MTC.MTCMendler where
 open import AgdaAsciiPrelude.AsciiPrelude
 open Functor {{...}} renaming (_<$>_ to _<$>f_)
 
-variable
-  A : Set
-  F : Set -> Set
+private
+  variable
+    A : Set
+    F : Set -> Set
 
 Algebra : (Set -> Set) -> Set -> Set
 Algebra F A = forall R -> (R -> A) -> F R -> A
