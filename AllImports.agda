@@ -6,4 +6,5 @@ import BasicVarMonads.BaseVarMonad
 import BasicVarMonads.Constructions
 import MTC.MTCCasual
 import MTC.MTCMendler
-import MTC.BijFunctor
+import MTC.MTCBijective
+import MTC.MTCExperimental
