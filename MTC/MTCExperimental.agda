@@ -9,25 +9,6 @@ private
     F : Set -> Set
     n n1 n2 : Nat
 
-{-}
-Algebra : (Set -> Set) -> Set -> Set -> Set
-Algebra F R A = (R -> A) -> F R -> A
-
-Fix : Set -> (Set -> Set) -> Set
-Fix R F = forall A -> Algebra F R A -> A
-
-foldF : Algebra F R A -> Fix R F -> A
-foldF alg f = f _ alg
-
-
-In : F (Fix R F) -> Fix (Fix R F) F
-In {F} f _ alg = alg (foldF {F = F} {!!}) f
-
-
-Ex : Fix R F -> F R
-Ex {F = F} = foldF {F = F} (const id)
--}
-
 
 Algebra : (Set -> Set) -> Set -> Set -> Set
 Algebra F R A = (R -> A) -> F R -> A
