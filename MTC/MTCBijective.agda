@@ -45,5 +45,5 @@ foldF alg f = f _ alg
 In : F (Fix F) -> Fix F
 In f _ alg = alg _ ((foldF alg) <,> \ a _ alg2 -> {!!}) f
 
-Ex : {{bf : BijFunctor F}} -> Fix F -> F (Fix F)
-Ex = foldF \ _ [[_]] f -> ( {!!} <$>bf f)
+Out : {{bf : BijFunctor F}} -> Fix F -> F (Fix F)
+Out = foldF \ _ [[_]] f -> ( {!!} <$>bf f)

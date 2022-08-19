@@ -21,5 +21,5 @@ foldF alg f = f _ alg
 In : F (Fix F) -> Fix F
 In f A alg = alg _ (foldF alg) f
 
-Ex : {{func : Functor F}} -> Fix F -> F (Fix F)
-Ex = foldF \ _ [[_]] -> (In o [[_]]) <$>f_
+Out : {{func : Functor F}} -> Fix F -> F (Fix F)
+Out = foldF \ _ [[_]] -> (In o [[_]]) <$>f_
