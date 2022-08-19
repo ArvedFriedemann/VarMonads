@@ -31,19 +31,23 @@ record BijFunctor (F : Set -> Set) : Set where
   field
     _<$>_ : A <-*-> B -> F A -> F B
 
-open BijFunctor {{...}} renaming (_<$>_ to _<$>bf_)
 
-Algebra : (Set -> Set) -> Set -> Set
-Algebra F A = forall R -> (R <-*-> A) -> F R -> A
+private
+  open BijFunctor {{...}} renaming (_<$>_ to _<$>bf_)
 
-Fix : (Set -> Set) -> Set
-Fix F = forall A -> Algebra F A -> A
+  Algebra : (Set -> Set) -> Set -> Set
+  Algebra F A = forall R -> (R <-*-> A) -> F R -> A
 
-foldF : Algebra F A -> Fix F -> A
-foldF alg f = f _ alg
+  Fix : (Set -> Set) -> Set
+  Fix F = forall A -> Algebra F A -> A
 
+  foldF : Algebra F A -> Fix F -> A
+  foldF alg f = f _ alg
+
+{-}
 In : F (Fix F) -> Fix F
-In f _ alg = alg _ ((foldF alg) <,> \ a _ alg2 -> {!!}) f
+In f _ alg = alg _ ((foldF alg) <,> {!!}) f
 
 Out : {{bf : BijFunctor F}} -> Fix F -> F (Fix F)
 Out = foldF \ _ [[_]] f -> ( {!!} <$>bf f)
+-}

@@ -6,23 +6,12 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import BasicVarMonads.BaseVarMonad
 
 open import MTC.MTCBijective
+open import BasicVarMonads.Pointers.PolyVars
 
 private
   variable
     A B C : Set
     F M V : Set -> Set
-
-record PolyVar (V : Set -> Set) (A : Set) : Set where
-  constructor PV
-  field
-    Orig : Set
-    CVar : V Orig
-    t : Orig <-*-> A
-  open _<-*->_ t public
-
-
-PolyVarFunctor : BijFunctor (PolyVar V)
-PolyVarFunctor = record { _<$>_ = \{ f (PV C v t) -> PV C v (f <o> t) } }
 
 open BaseVarMonad {{...}}
 
