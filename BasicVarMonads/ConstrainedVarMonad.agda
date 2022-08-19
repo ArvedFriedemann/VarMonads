@@ -15,3 +15,4 @@ record ConstrVarMonad
     new : {{K A}} -> A -> M (V A)
     read : {{K A}} -> V A -> M A
     write : {{K A}} -> V A -> A -> M T
+    overlap {{mon}} : Monad M
