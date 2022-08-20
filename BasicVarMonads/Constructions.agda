@@ -9,7 +9,6 @@ open import BasicVarMonads.ConstrainedVarMonad
 open import MTC.MTCBijective
 open import BasicVarMonads.Pointers.PolyVars
 
-open import Util.Eq
 open import Util.Lattice
 open import Util.Derivation
 
@@ -40,14 +39,13 @@ open BaseVarMonadConstructions public
 module LatticeVarMonadConstructions where
   open import BasicVarMonads.LatticeVarMonad
   open ConstrVarMonad {{...}}
-  open Eq {{...}}
   open BoundedMeetSemilattice {{...}}
 
   ConstrVarMonad=>LatVarMonad :
     {{cvm : ConstrVarMonad K M V}} ->
+    {{K derives Eq}} ->
     {{K derives BoundedMeetSemilattice}} ->
-    {{(\A -> Eq A -x- BoundedMeetSemilattice A) derives K}} ->
-    LatVarMonad M V
+    ConstrLatVarMonad K M V
   ConstrVarMonad=>LatVarMonad = record {
     cvm = record {
       new = new ;

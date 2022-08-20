@@ -74,3 +74,10 @@ trivialBoundedLattice {A = A} = record {
     ... | true = trivcont x
     trivJoin trivbot y = y
     trivJoin y trivbot = y
+
+trivialEq : {{eq : Eq A}} -> Eq (TrivLat A)
+trivialEq = record { _==_ = \ {
+  trivtop trivtop -> true ;
+  trivbot trivbot -> true ;
+  (trivcont x) (trivcont y) -> x == y ;
+  _ _ -> false } }
