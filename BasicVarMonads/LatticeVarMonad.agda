@@ -30,7 +30,7 @@ module RunTrivLat where
 
   private
     variable
-      K : Set -> Set
+      K K' : Set -> Set
 
   open import Util.Lattice
   open import Util.Derivation
@@ -49,9 +49,9 @@ module RunTrivLat where
   -- TODO: This should be done properly with a lattice monad!
 
   runFDCVarMon : {{cdvm : ConstrLatVarMonad K M V}} ->
-    {{forall {A} -> K (TrivLat A)}} ->
-    FCDVarMon K (TLP V) A ->
-    M (A or (TLPCont K V A))
+    {{K' derives (K o TrivLat)}} ->
+    FCDVarMon K' (TLP V) A ->
+    M (A or (TLPCont K' V A))
   runFDCVarMon newF = left <$> new'
   runFDCVarMon (readF v) = read v >>= \ {
     (trivcont x) -> left <$> return x ;
