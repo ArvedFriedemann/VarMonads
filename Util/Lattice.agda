@@ -2,6 +2,10 @@ module Util.Lattice where
 
 open import AgdaAsciiPrelude.AsciiPrelude
 
+private
+  variable
+    A : Set
+
 record Semilattice (A : Set) : Set where
   field
     _<>_ : A -> A -> A
@@ -29,3 +33,44 @@ record Lattice (A : Set) : Set where
     join-sl : Semilattice A
   open Semilattice meet-sl renaming (_<>_ to _/\_) public
   open Semilattice join-sl renaming (_<>_ to _\/_) public
+
+record BoundedLattice (A : Set) : Set where
+  field
+    meet-bsl : BoundedMeetSemilattice A
+    join-bsl : BoundedJoinSemilattice A
+  open BoundedMeetSemilattice meet-bsl public
+  open BoundedJoinSemilattice join-bsl public
+
+
+
+data TrivLat (A : Set) : Set where
+  trivtop   : TrivLat A
+  trivcont  : A -> TrivLat A
+  trivbot   : TrivLat A
+
+trivialBoundedLattice : {{eq : Eq A}} -> BoundedLattice (TrivLat A)
+trivialBoundedLattice {A = A} = record {
+  meet-bsl = record { bsl = record {
+    sl = record { _<>_ = trivMeet } ;
+    neut = trivtop } } ;
+  join-bsl = record { bsl = record {
+    sl = record { _<>_ = trivJoin } ;
+    neut = trivbot } } }
+  where
+    trivMeet : TrivLat A -> TrivLat A -> TrivLat A
+    trivMeet trivtop y = y
+    trivMeet y trivtop = y
+    trivMeet (trivcont x) (trivcont y) with x == y
+    ... | false = trivbot
+    ... | true = trivcont x
+    trivMeet trivbot y = trivbot
+    trivMeet y trivbot = trivbot
+
+    trivJoin : TrivLat A -> TrivLat A -> TrivLat A
+    trivJoin trivtop y = trivtop
+    trivJoin y trivtop = trivtop
+    trivJoin (trivcont x) (trivcont y) with x == y
+    ... | false = trivtop
+    ... | true = trivcont x
+    trivJoin trivbot y = y
+    trivJoin y trivbot = y
