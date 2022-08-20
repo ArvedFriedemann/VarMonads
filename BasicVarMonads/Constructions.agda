@@ -41,12 +41,12 @@ module LatticeVarMonadConstructions where
   open ConstrVarMonad {{...}}
   open BoundedMeetSemilattice {{...}}
 
-  ConstrVarMonad=>LatVarMonad :
+  ConstrVarMonad=>ConstrLatVarMonad :
     {{cvm : ConstrVarMonad K M V}} ->
     {{K derives Eq}} ->
     {{K derives BoundedMeetSemilattice}} ->
     ConstrLatVarMonad K M V
-  ConstrVarMonad=>LatVarMonad = record {
+  ConstrVarMonad=>ConstrLatVarMonad = record {
     cvm = record {
       new = new ;
       read = read ;
