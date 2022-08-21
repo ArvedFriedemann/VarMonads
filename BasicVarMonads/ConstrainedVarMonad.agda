@@ -28,6 +28,15 @@ record ConstrDefVarMonad
     write : {{K A}} -> V A -> A -> M T
     overlap {{mon}} : Monad M
 
+record NewConstrDefVarMonad
+    (K : Set -> Set)
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
+  field
+    new : {{K A}} -> M (V A)
+    read : V A -> M A
+    write : V A -> A -> M T
+    overlap {{mon}} : Monad M
 
 --Free Constrained Default VarMonad
 data FCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where

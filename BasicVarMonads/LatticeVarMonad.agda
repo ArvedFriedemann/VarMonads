@@ -19,7 +19,6 @@ record ConstrLatVarMonad (K : Set -> Set) (M : Set -> Set) (V : Set -> Set) : Se
     cvm : ConstrVarMonad K M V
     overlap {{KEq}} : K derives Eq
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
-    overlap {{mon}} : Monad M
   open ConstrVarMonad cvm public
 
 
