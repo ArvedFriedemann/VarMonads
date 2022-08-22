@@ -40,6 +40,14 @@ ST S' M = S' (RecStateT S' M)
 runRecStateT : RecStateT S' M A -> ST S' M -> M (A -x- ST S' M)
 runRecStateT m s = m _ s
 
+RecStateTMonadState : {{mon : Monad M}} -> MonadState (ST S' M) (RecStateT S' M)
+RecStateTMonadState = record {
+  monad = record {
+    return = \x _ s -> return (x , s) ;
+    _>>=_ = \m f _ s -> m _ s >>= \ {(a , s') -> f a _ s'} } ;
+  get = \_ s -> return ({!   !} , s) ;
+  put = \x _ s -> return (tt , {!!}) }
+
 bfsFork : {{mon :  Monad M}} -> MonadFork (StateT (List (M' T)) M)
 bfsFork = record {
     fork = \ m -> {!!};
