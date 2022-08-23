@@ -58,8 +58,9 @@ runFMFT (bindF m f) = do
 flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
 flush lst = concat <$> (sequenceM (map ((snd <$>_) o runFMFT) lst) )
 
-propagate : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-propagate n m = (snd <$> runFMFT m) >>= iterateM n flush
+boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
+boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
+
 {-}
 
 instance
