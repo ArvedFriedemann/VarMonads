@@ -9,7 +9,7 @@ open import Category.Monad.State renaming (RawMonadState to MonadState)
 
 private
   variable
-    A S : Set
+    A B S : Set
     M M' : Set -> Set
     S' : (Set -> Set) -> Set
 
@@ -21,6 +21,45 @@ record MonadFork (M : Set -> Set) : Set where
 dfsFork : {{mon : Monad M}} -> MonadFork M
 dfsFork = record { fork = \ m -> m >> return tt }
 
+
+open MonadState {{...}} using (get; put; modify)
+{-}
+instance
+  StateTMS : {{mon : Monad M}} ->  MonadState S (StateT S M)
+  StateTMS {S = S} {{mon}} = StateTMonadState S mon
+
+  StateTMon : {{mon : Monad M}} -> Monad (StateT S M)
+  StateTMon {S = S} {{mon}} = StateTMonad S mon
+-}
+ActList : (Set -> Set) -> Set
+ActList M = List (M T)
+
+{-}
+naiveFork : {{Monad M}} -> MonadFork (StateT (ActList M) M)
+naiveFork = record { fork = \m -> modify {!!} }
+-}
+
+--FreeMonadForkT
+data FMFT (M : Set -> Set) : Set -> Set where
+  liftF : M A -> FMFT M A
+  forkF : FMFT M A -> FMFT M T
+  returnF : A -> FMFT M A
+  bindF : FMFT M A -> (A -> FMFT M B) -> FMFT M B
+
+runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
+runFMFT (liftF m) = (_, []) <$> m
+runFMFT (forkF m) = return (tt , [])
+runFMFT (returnF x) = return (x , [])
+runFMFT (bindF m f) = do
+  (a , lst) <- runFMFT m
+  (b , lst') <- runFMFT (f a)
+  return (b , lst ++ lst')
+
+flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
+flush lst = concat <$> (sequenceM (map ((snd <$>_) o runFMFT) lst) )
+
+propagate : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
+propagate n m = (snd <$> runFMFT m) >>= iterateM n flush
 {-}
 
 instance
@@ -33,7 +72,6 @@ instance
 
 open import AgdaAsciiPrelude.TrustMe
 
-open MonadState {{...}} using (get; put; modify)
 
 RecStateT : (S' : (Set -> Set) -> Set) (M : Set -> Set) (A : Set) -> Set
 RecStateT S' M A = forall M' -> S' M' -> M (A -x- S' M')
@@ -67,19 +105,16 @@ stateTest = fst <$> runRecStateT {S' = \M -> (Nat -x- M T)} {M = Maybe} (3 , ret
   (put (4 , return tt) >> get >>= \{ (x , m) -> return x })
 -}
 
-ActList : (Set -> Set) -> Set
-ActList M = List (M T)
-
 bfsFork : {{mon :  Monad M}} -> MonadFork (RecStateT ActList M)
 bfsFork = record {
     fork = \ m -> modify (void m ::_)
   }
 
-flush : {{mon : Monad M}} -> RecStateT ActList M T
-flush = do
+flush' : {{mon : Monad M}} -> RecStateT ActList M T
+flush' = do
   s <- get
   put []
   void $ sequenceM s
 
-propagate : {{mon : Monad M}} -> Nat -> RecStateT ActList M (ActList (RecStateT ActList M))
-propagate n = sequenceM (replicate n flush) >> get
+propagate' : {{mon : Monad M}} -> Nat -> RecStateT ActList M (ActList (RecStateT ActList M))
+propagate' n = sequenceM (replicate n flush') >> get
