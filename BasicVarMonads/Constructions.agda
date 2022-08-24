@@ -53,3 +53,19 @@ module LatticeVarMonadConstructions where
       write = \v x -> read v >>= \x' -> write v (x /\ x') } }
 
 open LatticeVarMonadConstructions public
+
+module ModifyVarMonadConstructions where
+  open import BasicVarMonads.ModifyVarMonad
+  open ConstrDefVarMonad {{...}}
+
+  ConstrDefVarMonad=>ConstrDefModifyVarMonad :
+    {{vcm : ConstrDefVarMonad K M V}} ->
+    ConstrDefModifyVarMonad K M V
+  ConstrDefVarMonad=>ConstrDefModifyVarMonad = record {
+    new = new ;
+    modify = \v f -> do
+      x <- read v
+      write v (fst (f x))
+      return (snd (f x)) }
+
+open ModifyVarMonadConstructions public
