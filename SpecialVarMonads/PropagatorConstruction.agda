@@ -5,6 +5,8 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import BasicVarMonads.ModifyVarMonad
 open import BasicVarMonads.ConstrainedVarMonad
 open import BasicVarMonads.LatticeVarMonad
+open import MiscMonads.ConcurrentMonad
+open MonadFork {{...}}
 open ConstrDefModifyVarMonad {{...}}
 
 open RunTrivLat
@@ -43,6 +45,7 @@ FCDCont K V A = Sigma Set \B -> V B -x- (B -> FCDVarMon K V A)
 
 module runFDCVarMonProp
     {{lvm : ConstrDefModifyVarMonad K M V}}
+    {{mfork : MonadFork M}}
     {{kinst : forall {A} -> K (DepTrivContPtrCont M V List A)}}
     {{keq : (K o DepTrivContPtrCont M V List) derives Eq}} where
 
@@ -53,11 +56,16 @@ module runFDCVarMonProp
     ... | trivcont a = ((trivcont a) , []) , map (_$ x) props
     ... | r          = (r , props) , []
 
-    propagatorWrite : ContTupPtr M V List A -> A -> M T
-    propagatorWrite v x = do
-      props <- modify v (propagatorModify x)
-      void (sequenceM props) --TODO: continue evaluating!
+    runPropagators : List (M T) -> M T
+    runPropagators props = void (sequenceM (map fork props))
 
+    propagatorWrite : ContTupPtr M V List A -> A -> M T
+    propagatorWrite v x =  modify v (propagatorModify x) >>= runPropagators --TODO: continue evaluating!
+
+
+  --Agda here does not know that this always produces a smaller continuation
+  --(or rather that if the continuation stays the same size, it is only ever operated when
+  --its value actually changed)
   runFDCVarMonProp : FCDVarMon K (ContTupPtr M V List) A ->
                       M (A or (FCDCont K (ContTupPtr M V List) A))
   runFDCVarMonProp newF = left <$> new
@@ -69,3 +77,10 @@ module runFDCVarMonProp
   runFDCVarMonProp (bindF m f) = runFDCVarMonProp m >>= \{
     (left res) -> runFDCVarMonProp (f res) ;
     (right (_ , v , cont)) -> right <$> return (_ , v , \b -> bindF (cont b) f) }
+
+  {-# TERMINATING #-}
+  toVarProp : A or (FCDCont K (ContTupPtr M V List) A) -> M T
+  toVarProp (left res) = return tt
+  toVarProp (right (_ , v , cont)) = modify v (\{
+        (trivcont x , props) -> propagatorModify x (trivcont x , (\c -> runFDCVarMonProp (cont c) >>= toVarProp) :: props) ;
+        (r , props) -> (r , props) , [] }) >>= runPropagators
