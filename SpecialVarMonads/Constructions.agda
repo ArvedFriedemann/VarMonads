@@ -4,22 +4,56 @@ open import AgdaAsciiPrelude.AsciiPrelude
 
 private
   variable
-    A B : Set
+    A : Set
+    B : Set -> Set
     M F V K C : Set -> Set
 
-module ProductConstruction where
+
+DepPtr : (Set -> Set) -> (Set -> Set) -> Set -> Set
+DepPtr V B A = V (A -x- B A)
+
+module DependentProductConstruction where
   open import BasicVarMonads.ConstrainedVarMonad
-  open import SpecialVarMonads.FixedValueVarMonad
+  open import BasicVarMonads.ModifyVarMonad
+  open import SpecialVarMonads.FixedValueVarMonad renaming (ConstrDefDepModFixedValVarMonad to FixedVarMonad)
+  open import Util.Derivation
 
-  open import MTC.MTCMendler
+  open ConstrDefModifyVarMonad {{...}}
 
-  TupPtr : (Set -> Set) -> Set -> Set -> Set
-  TupPtr V B A = V (A -x- B)
+  ConstrDefModifyVarMonad=>FixedVarMonad :
+    {{vcm : ConstrDefModifyVarMonad K M V}} ->
+    {{K derives (\A -> K (A -x- B A))}} ->
+    ConstrDefVarMonad K M (DepPtr V B)
+    -x- FixedVarMonad K M (DepPtr V B) B
+  ConstrDefModifyVarMonad=>FixedVarMonad =
+    record {
+      new = new ;
+      read = \v -> fst <$> read v ;
+      write = \v x -> write' v \{ (a , b) -> x , b } } ,
+    record {
+      new = new ;
+      read = \v -> snd <$> read v ;
+      write = \v x -> write' v \{ (a , b) -> a , x } }
 
-  RecTupPtr : (Set -> Set) -> ((Set -> Set) -> Set) -> Set -> Set
-  RecTupPtr V F A = V (A -x- Fix (F o TupPtr) )
+module DependentLatticeProductConstruction where
+  open import BasicVarMonads.LatticeVarMonad
+  open import SpecialVarMonads.FixedValueVarMonad renaming (ConstrDefDepModFixedValVarMonad to FixedVarMonad)
+  open import Util.Derivation
 
-  ConstrDefVarMonad=>FixedDefValVarMonad :
-    {{vcm : ConstrDefVarMonad M V}} ->
-    ConstrDefVarMonad M
-open ProductConstruction public
+  open ConstrLatVarMonad {{...}}
+
+  ConstrDefModifyVarMonad=>FixedVarMonad :
+    {{vcm : ConstrLatVarMonad K M V}} ->
+    {{K derives (K o B)}} ->
+    {{K derives (\A -> K (A -x- B A))}} ->
+    ConstrLatVarMonad K M (DepPtr V B)
+    -x- FixedVarMonad K M (DepPtr V B) B
+  ConstrDefModifyVarMonad=>FixedVarMonad =
+    record { cvm = record {
+      new = \x -> new (x , top) ;
+      read = \v -> fst <$> read v ;
+      write = \v x -> write v (x , top) } } ,
+    record {
+      new = new' ;
+      read = \v -> snd <$> read v ;
+      write = \v x -> write v (top , x) }

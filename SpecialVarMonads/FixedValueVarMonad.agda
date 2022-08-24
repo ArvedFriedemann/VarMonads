@@ -7,12 +7,12 @@ private
   variable
     A B : Set
 
-record FixedDefValVarMonad
+record ConstrDefDepModFixedValVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
     (V : Set -> Set)
-    (B : Set) : Set where
+    (B : Set -> Set) : Set where
   field
-    new : M (V A)
-    read : V A -> M B
-    write : V A -> B -> M T
+    new : {{K A}} -> M (V A)
+    read : {{K A}} -> V A -> M (B A)
+    write : {{K A}} -> V A -> (B A) -> M T

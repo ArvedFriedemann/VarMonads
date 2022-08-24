@@ -5,13 +5,17 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import Util.Lattice
 open import Util.Derivation
 open import BasicVarMonads.ConstrainedVarMonad
+open import BasicVarMonads.ModifyVarMonad
 
 private
   variable
     A : Set
     M V : Set -> Set
 
-record ConstrLatVarMonad (K : Set -> Set) (M : Set -> Set) (V : Set -> Set) : Set where
+record ConstrLatVarMonad
+    (K : Set -> Set)
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
   open Eq {{...}} public
   open BoundedMeetSemilattice {{...}} public
 
@@ -21,9 +25,21 @@ record ConstrLatVarMonad (K : Set -> Set) (M : Set -> Set) (V : Set -> Set) : Se
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
   open ConstrVarMonad cvm public
 
-
   new' : {{K A}} -> M (V A)
   new' = new top
+
+record ConstrLatDefModVarMonad
+    (K : Set -> Set)
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
+  open Eq {{...}} public
+  open BoundedMeetSemilattice {{...}} public
+
+  field
+    cvm : ConstrDefModifyVarMonad K M V
+    overlap {{KEq}} : K derives Eq
+    overlap {{KBMSL}} : K derives BoundedMeetSemilattice
+  open ConstrDefModifyVarMonad cvm public
 
 module RunTrivLat where
 
