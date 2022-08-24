@@ -41,6 +41,19 @@ record ConstrLatDefModVarMonad
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
   open ConstrDefModifyVarMonad cvm public
 
+record ConstrLatDefVarMonad
+    (K : Set -> Set)
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
+  open Eq {{...}} public
+  open BoundedMeetSemilattice {{...}} public
+
+  field
+    cvm : ConstrDefVarMonad K M V
+    overlap {{KEq}} : K derives Eq
+    overlap {{KBMSL}} : K derives BoundedMeetSemilattice
+  open ConstrDefVarMonad cvm public
+
 module RunTrivLat where
 
   private
