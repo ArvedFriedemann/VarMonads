@@ -82,5 +82,17 @@ module runFDCVarMonProp
   toVarProp : A or (FCDCont K (ContTupPtr M V List) A) -> M T
   toVarProp (left res) = return tt
   toVarProp (right (_ , v , cont)) = modify v (\{
-        (trivcont x , props) -> propagatorModify x (trivcont x , (\c -> runFDCVarMonProp (cont c) >>= toVarProp) :: props) ;
-        (r , props) -> (r , props) , [] }) >>= runPropagators
+        (trivcont x , props) -> propagatorModify x (trivcont x , newprop :: props) ;
+        (r , props) -> (r , newprop ::  props) , [] }) >>= runPropagators
+      where
+        newprop = runFDCVarMonProp o cont >=> toVarProp
+
+
+  {-
+  open import AgdaAsciiPrelude.TrustMe
+
+  runAll : FCDVarMon K (ContTupPtr M V List) A -> M A
+  runAll m = runFDCVarMonProp m >>= \{
+    (left x) -> return x ;
+    (right (_ , _ , cont)) -> runAll (cont (trustVal tt)) }
+  -}
