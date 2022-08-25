@@ -61,6 +61,14 @@ flush lst = concat <$> (sequenceM (map ((snd <$>_) o runFMFT) lst) )
 boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
 boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
 
+{-# TERMINATING #-}
+propagate : {{mon : Monad M}} -> FMFT M A -> M (ActList (FMFT M))
+propagate {M = M} m = (snd <$> runFMFT m) >>= propagate'
+  where
+    propagate' : ActList (FMFT M) -> M (ActList (FMFT M))
+    propagate' [] = return []
+    propagate' m  = flush m >>= propagate'
+
 {-}
 
 instance

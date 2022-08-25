@@ -38,7 +38,7 @@ DepTrivContPtrCont : (Set -> Set) -> (Set -> Set) -> (Set -> Set) -> Set -> Set
 DepTrivContPtrCont M V C A = DepTrivPtrCont V (C o MCont M) A
 
 ContTupPtr : (Set -> Set) -> (Set -> Set) -> (Set -> Set) -> Set -> Set
-ContTupPtr M V C A = DepTrivPtr V (C o MCont M) A
+ContTupPtr M V C A = V (DepTrivContPtrCont M V C A)
 
 FCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
 FCDCont K V A = Sigma Set \B -> V B -x- (B -> FCDVarMon K V A)
@@ -60,7 +60,7 @@ module runFDCVarMonProp
     runPropagators props = void (sequenceM (map fork props))
 
     propagatorWrite : ContTupPtr M V List A -> A -> M T
-    propagatorWrite v x =  modify v (propagatorModify x) >>= runPropagators --TODO: continue evaluating!
+    propagatorWrite v x =  modify v (propagatorModify x) >>= runPropagators
 
 
   --Agda here does not know that this always produces a smaller continuation
