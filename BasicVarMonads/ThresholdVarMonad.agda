@@ -19,6 +19,10 @@ record BijTFunc (A : Set) (B : Set) : Set where
     Tfunc : A -> Maybe B
     Tfunc-1 : B -> A
 
+record BijTFunctor (F : Set -> Set) : Set where
+  field
+    _<bt$>_ : BijTFunc A B -> F A -> F B
+
 --ThresholdVar
 record TVar (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
   constructor TVarC
@@ -37,12 +41,18 @@ _<o>_ (BtoC <,> CtoB) (AtoB <,> BtoA) = (BtoC <=< AtoB) <,> (BtoA o CtoB)
 _<$o$>_ : BijTFunc A B -> TVar K V A -> TVar K V B
 _<$o$>_ t (TVarC T v f) = TVarC T v (t <o> f)
 
+
+TVarBijTFunctor : BijTFunctor (TVar K V)
+TVarBijTFunctor = record { _<bt$>_ = _<$o$>_ }
+
 record ThresholdVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
     (V : Set -> Set) : Set where
   field
-    cvm : NewConstrDefVarMonad K M (TVar K V)
+    cvm : NewConstrDefVarMonad K M V
+    tvbf : BijTFunctor V
     overlap {{KEq}} : K derives Eq
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
   open NewConstrDefVarMonad cvm public
+  open BijTFunctor tvbf public
