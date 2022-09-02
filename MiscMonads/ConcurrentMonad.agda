@@ -22,6 +22,11 @@ dfsFork : {{mon : Monad M}} -> MonadFork M
 dfsFork = record { fork = \ m -> m >> return tt }
 
 
+record MonadSTM (M' M : Set -> Set) : Set where
+  field
+    atomically : M' A -> M A
+
+
 open MonadState {{...}} using (get; put; modify)
 {-}
 instance
