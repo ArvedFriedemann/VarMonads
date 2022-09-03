@@ -52,7 +52,7 @@ record ThresholdVarMonad
   field
     cvm : NewConstrDefVarMonad K M V
     tvbf : BijTFunctor V
-    transOf : V A -> Sigma Set \Orig -> BijTFunc Orig A -x- K Orig
+    transOf : V A -> Sigma Set \Orig -> V Orig -x- BijTFunc Orig A -x- K Orig
     _=p>_ : V A -> V A -> M T --TODO : This can be derived
     overlap {{KEq}} : K derives Eq
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
@@ -60,4 +60,4 @@ record ThresholdVarMonad
   open BijTFunctor tvbf public
 
   newLike : V A -> M (V A)
-  newLike v = let (Orig , f , k) = transOf v in (f <bt$>_) <$> new {A = Orig} {{k = k}}
+  newLike v = let (Orig , v0 , f , k) = transOf v in (f <bt$>_) <$> new {A = Orig} {{k = k}}
