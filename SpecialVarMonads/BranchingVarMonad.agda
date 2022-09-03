@@ -94,8 +94,8 @@ module ConnectionOperations
 
   -- TODO : Set propagator if created!
   getChildAndCreated? : {{k : K A}} ->
-    SVar V S A -> V S -> M (Bool -x- SVar V S A)
-  getChildAndCreated? (SVarC path v) vs = atomically do
+    V S -> SVar V S A -> M (Bool -x- SVar V S A)
+  getChildAndCreated? vs (SVarC path v) = atomically do
     (x , mp , par) <- read v
     c <- fromMaybe (newSVar (vs :: path)) (return <$> lookup _ vs mp)
     write v (x , insert _ vs c mp , par)
@@ -109,9 +109,9 @@ module ConnectionOperations
     when c? (vpar =p> v)
     return (SVarC lstpar vpar)
 
-  getChild : {{k : K A}} -> SVar V S A -> V S -> M (SVar V S A)
-  getChild (SVarC lst v) vs = do
-    (c? , (SVarC lstpar vc)) <- getChildAndCreated? (SVarC lst v) vs
+  getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
+  getChild vs (SVarC lst v) = do
+    (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
     when c? (v =p> vc)
     return (SVarC lstpar vc)
 
@@ -120,11 +120,12 @@ module ConnectionOperations
   getLocalVar (SVarC origin v) = do
     target <- ask
     -- TODO : connecting path should check maybe whether the upperose variable is the same
-    let (origToTarget , origToOrigin) = if headEq {{eq = eq}} target origin
+    let (origToTarget , origToOrigin) =
+          if headEq {{eq = eq}} target origin
           then ([] , [])
           else connectingPath {{eq = eq}} target origin
-    par <- loop {M = M}
-                origToOrigin (return (SVarC origin v))
+    par <- loop {M = M} origToOrigin (return (SVarC origin v))
                 (const getParent)
-    loop {M = M} origToTarget (return par)
-                (\s sv -> getChild sv s )
+    res <- loop {M = M} origToTarget (return par)
+                getChild
+    return res
