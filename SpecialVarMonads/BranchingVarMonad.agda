@@ -33,18 +33,17 @@ record SVar (V : Set -> Set) (S : Set) {{sto : ISTO (V S)}} (A : Set) : Set wher
 
 SVarPType V S A = A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A)
 
-initEqSegment : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A -x- List A)
-initEqSegment [] ys = ([] , [] , ys)
-initEqSegment xs [] = ([] , xs , [])
-initEqSegment (x :: xs) (y :: ys) with x == y
-... | false = ([] , x :: xs , y :: ys)
-... | true  = let (i , xs' , ys') = initEqSegment xs ys in (x :: i , xs' , ys')
+afterInitEqSegment : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A)
+afterInitEqSegment [] ys = ([] , ys)
+afterInitEqSegment xs [] = (xs , [])
+afterInitEqSegment (x :: xs) (y :: ys) with x == y
+... | false = (x :: xs , y :: ys)
+... | true  = let (xs' , ys') = afterInitEqSegment xs ys in (xs' , ys')
 
 --target path (where we are), origin path (where the variable is from),
   --(orig to target , orig to origin)
 connectingPath : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A)
-connectingPath xs ys = let (i , xs' , ys') = initEqSegment (reverse xs) (reverse ys)
-                        in xs' , ys'
+connectingPath xs ys = afterInitEqSegment (reverse xs) (reverse ys)
 
 headEq : {{eq : Eq A}} -> List A -> List A -> Bool
 headEq (x :: _) (y :: _) = x == y
