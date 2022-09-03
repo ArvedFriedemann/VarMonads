@@ -40,7 +40,7 @@ initEqSegment (x :: xs) (y :: ys) with x == y
   --(orig to target , orig to origin)
 connectingPath : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A)
 connectingPath xs ys = let (i , xs' , ys') = initEqSegment (reverse xs) (reverse ys)
-                        in ((maybeToList $ last i) ++ xs') , ((maybeToList $ last i) ++ ys')
+                        in xs' , ys'
 
 {-}
 addIfNex : {{isto : ISTO A}} -> A -> B -> Map A B -> (B -x- Map A B)
