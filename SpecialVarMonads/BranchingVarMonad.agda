@@ -21,13 +21,17 @@ record BranchingVarMonad
     newBranch : M (V S)
   open ConstrDefVarMonad cvm public
 
+SVarPType : (V : Set -> Set) -> (S : Set) -> {{sto : ISTO (V S)}} -> Set -> Set
+
 {-# NO_POSITIVITY_CHECK  #-}
 record SVar (V : Set -> Set) (S : Set) {{sto : ISTO (V S)}} (A : Set) : Set where
   constructor SVarC
   field
     path : List (V S)
     --content, children, maybe parent
-    var : V (A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A))
+    var : V (SVarPType V S A)
+
+SVarPType V S A = A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A)
 
 initEqSegment : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A -x- List A)
 initEqSegment [] ys = ([] , [] , ys)
@@ -61,7 +65,7 @@ open import Util.Derivation
 module ConnectionOperations
   {{isto : ISTO (V S)}}
   {{eq : Eq (V S)}}
-  {{ks : K derives (\A -> K (A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A))) }}
+  {{ks : K derives (K o SVarPType V S) }}
   {{bvm : ConstrDefVarMonad K M' V}}
   {{stm : MonadSTM M' M}}
   {{tvm : ThresholdVarMonad K M V}}
