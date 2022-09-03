@@ -41,3 +41,11 @@ module EqTPropagators {K M V : Set -> Set} {{tvm : ThresholdVarMonad K M V}} whe
           {{BoundedMeetSemilattice A}} ->
           V A -> V A -> M T
   v1 =p> v2 = continuous v1 top (write v2)
+
+  _=p>_[_] :
+    (v1 : V A) -> (v2 : V B) ->
+    (sameOrigT v1 v2) ->
+    M T
+  v1 =p> v2 [ eq ] with transOf v1 | transOf v2
+  v1 =p> v2 [ refl ] | (TVarC OrigT {{origK}} vo1 f1) | (TVarC OrigT vo2 f2) =
+                            _=p>_ {{KEq {{origK}}}} {{KBMSL {{origK}}}} vo1 vo2

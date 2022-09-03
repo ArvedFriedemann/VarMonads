@@ -102,6 +102,8 @@ module ConnectionOperations
     return (is-nothing par , c)
 
   open ThresholdVarMonad tvm
+  open import SpecialVarMonads.Propagators.BasicPropagators
+  open EqTPropagators
 
   getParent : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getParent (SVarC lst v) = do

@@ -11,7 +11,7 @@ open import Util.Lattice
 private
   variable
     A B C : Set
-    V K : Set -> Set
+    M V K : Set -> Set
 
 record BijTFunc (A : Set) (B : Set) : Set where
   constructor _<,>_
@@ -53,7 +53,6 @@ record ThresholdVarMonad
     cvm : NewConstrDefVarMonad K M V
     tvbf : BijTFunctor V
     transOf : V A -> TVar K V A
-    _=p>_ : V A -> V A -> M T --TODO : This can be derived
     overlap {{KEq}} : K derives Eq
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
   open NewConstrDefVarMonad cvm public
@@ -62,3 +61,6 @@ record ThresholdVarMonad
   newLike : V A -> M (V A)
   newLike v = (f <bt$>_) <$> new {A = OrigT} {{k = origK}}
     where open TVar (transOf v)
+
+  sameOrigT : V A -> V B -> Set
+  sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
