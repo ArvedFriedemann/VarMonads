@@ -86,24 +86,23 @@ module ConnectionOperations
   newSVar : {{k : K A}} -> List (V S) -> M' (SVar V S A)
   newSVar lst = SVarC lst <$> new
 
-
-  -- TODO : Set propagator if created!
   getParentAndCreated? : {{k : K A}} -> SVar V S A -> M (Bool -x- SVar V S A)
   getParentAndCreated? (SVarC [] v) = return (false , SVarC [] v)
-  getParentAndCreated? (SVarC (_ :: pathTail) v) = atomically do
+  getParentAndCreated? (SVarC (vs :: pathTail) v) = atomically do
     (x , mp , par) <- read v
-    p <- fromMaybe (newSVar pathTail) (return <$> par)
-    write v (x , mp , just p)
-    return (is-nothing par , p)
+    (SVarC pp vp) <- fromMaybe (newSVar pathTail) (return <$> par)
+    write v (x , mp , just (SVarC pp vp))
+    modify' vp \{(a , mp , par) -> (a , insert _ vs (SVarC pp vp) mp , par)}
+    return (is-nothing par , (SVarC pp vp))
 
-  -- TODO : Set propagator if created!
   getChildAndCreated? : {{k : K A}} ->
     V S -> SVar V S A -> M (Bool -x- SVar V S A)
   getChildAndCreated? vs (SVarC path v) = atomically do
     (x , mp , par) <- read v
-    c <- fromMaybe (newSVar (vs :: path)) (return <$> lookup _ vs mp)
-    write v (x , insert _ vs c mp , par)
-    return (is-nothing par , c)
+    (SVarC pc vc) <- fromMaybe (newSVar (vs :: path)) (return <$> lookup _ vs mp)
+    write v (x , insert _ vs (SVarC pc vc) mp , par)
+    modify' vc \{(a , mp , par) -> (a , mp , just (SVarC path v))}
+    return (is-nothing par , (SVarC pc vc))
 
   open ThresholdVarMonad tvm
   open import SpecialVarMonads.Propagators.BasicPropagators

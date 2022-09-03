@@ -28,6 +28,9 @@ record ConstrDefVarMonad
     write : {{k : K A}} -> V A -> A -> M T
     overlap {{mon}} : Monad M
 
+  modify' : {{k : K A}} -> V A -> (A -> A) -> M T
+  modify' v f = read v >>= write v o f
+
 record NewConstrDefVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
