@@ -74,28 +74,28 @@ module ConnectionOperations
   instance
     _ = MonadMaybe
 
-  module _ where
-    open ConstrDefVarMonad bvm
-    newSVar : {{k : K A}} -> M' (SVar V S A)
-    newSVar = (| SVarC ask new |)
+  open ConstrDefVarMonad bvm
+  
+  newSVar : {{k : K A}} -> M' (SVar V S A)
+  newSVar = (| SVarC ask new |)
 
 
-    -- TODO : Set propagator if created!
-    getParentAndCreated? : {{k : K A}} -> SVar V S A -> M (Bool -x- SVar V S A)
-    getParentAndCreated? (SVarC _ v) = atomically do
-      (x , mp , par) <- read v
-      p <- fromMaybe newSVar (return <$> par)
-      write v (x , mp , just p)
-      return (is-nothing par , p)
+  -- TODO : Set propagator if created!
+  getParentAndCreated? : {{k : K A}} -> SVar V S A -> M (Bool -x- SVar V S A)
+  getParentAndCreated? (SVarC _ v) = atomically do
+    (x , mp , par) <- read v
+    p <- fromMaybe newSVar (return <$> par)
+    write v (x , mp , just p)
+    return (is-nothing par , p)
 
-    -- TODO : Set propagator if created!
-    getChildAndCreated? : {{k : K A}} ->
-      SVar V S A -> V S -> M (Bool -x- SVar V S A)
-    getChildAndCreated? (SVarC _ v) vs = atomically do
-      (x , mp , par) <- read v
-      c <- fromMaybe newSVar (return <$> lookup _ vs mp)
-      write v (x , insert _ vs c mp , par)
-      return (is-nothing par , c)
+  -- TODO : Set propagator if created!
+  getChildAndCreated? : {{k : K A}} ->
+    SVar V S A -> V S -> M (Bool -x- SVar V S A)
+  getChildAndCreated? (SVarC _ v) vs = atomically do
+    (x , mp , par) <- read v
+    c <- fromMaybe newSVar (return <$> lookup _ vs mp)
+    write v (x , insert _ vs c mp , par)
+    return (is-nothing par , c)
 
   open ThresholdVarMonad tvm
 
