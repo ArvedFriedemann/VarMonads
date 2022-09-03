@@ -60,7 +60,6 @@ module ConnectionOperations
   {{eq : Eq (V S)}}
   {{bvm : ConstrDefVarMonad K M' V}}
   {{ks : K derives (\A -> K (A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A))) }}
-  {{mr' : MonadReader (List (V S)) M'}}
   {{mr : MonadReader (List (V S)) M}}
   {{tvm : ThresholdVarMonad K M V}} where
 
@@ -75,25 +74,26 @@ module ConnectionOperations
     _ = MonadMaybe
 
   open ConstrDefVarMonad bvm
-  
-  newSVar : {{k : K A}} -> M' (SVar V S A)
-  newSVar = (| SVarC ask new |)
+
+  newSVar : {{k : K A}} -> List (V S) -> M' (SVar V S A)
+  newSVar lst = SVarC lst <$> new
 
 
   -- TODO : Set propagator if created!
   getParentAndCreated? : {{k : K A}} -> SVar V S A -> M (Bool -x- SVar V S A)
-  getParentAndCreated? (SVarC _ v) = atomically do
+  getParentAndCreated? (SVarC [] v) = return (false , SVarC [] v)
+  getParentAndCreated? (SVarC (_ :: pathTail) v) = atomically do
     (x , mp , par) <- read v
-    p <- fromMaybe newSVar (return <$> par)
+    p <- fromMaybe (newSVar pathTail) (return <$> par)
     write v (x , mp , just p)
     return (is-nothing par , p)
 
   -- TODO : Set propagator if created!
   getChildAndCreated? : {{k : K A}} ->
     SVar V S A -> V S -> M (Bool -x- SVar V S A)
-  getChildAndCreated? (SVarC _ v) vs = atomically do
+  getChildAndCreated? (SVarC path v) vs = atomically do
     (x , mp , par) <- read v
-    c <- fromMaybe newSVar (return <$> lookup _ vs mp)
+    c <- fromMaybe (newSVar (vs :: path)) (return <$> lookup _ vs mp)
     write v (x , insert _ vs c mp , par)
     return (is-nothing par , c)
 
@@ -117,7 +117,7 @@ module ConnectionOperations
     target <- ask
     let (origToTarget , origToOrigin) = connectingPath {{eq = eq}} target origin
     par <- loop {M = M}
-                (reverse origToOrigin)
+                origToOrigin
                 (const getParent)
                 (return (SVarC origin v))
     loop {M = M} origToTarget
