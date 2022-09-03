@@ -42,6 +42,10 @@ connectingPath : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A)
 connectingPath xs ys = let (i , xs' , ys') = initEqSegment (reverse xs) (reverse ys)
                         in xs' , ys'
 
+headEq : {{eq : Eq A}} -> List A -> List A -> Bool
+headEq (x :: _) (y :: _) = x == y
+headEq _ _ = false
+
 {-}
 addIfNex : {{isto : ISTO A}} -> A -> B -> Map A B -> (B -x- Map A B)
 addIfNex a b mp = fromMaybe b (lookup _ a mp') , mp'
@@ -115,11 +119,12 @@ module ConnectionOperations
   getLocalVar : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getLocalVar (SVarC origin v) = do
     target <- ask
-    let (origToTarget , origToOrigin) = connectingPath {{eq = eq}} target origin
+    -- TODO : connecting path should check maybe whether the upperose variable is the same
+    let (origToTarget , origToOrigin) = if headEq {{eq = eq}} target origin
+          then ([] , [])
+          else connectingPath {{eq = eq}} target origin
     par <- loop {M = M}
-                origToOrigin
+                origToOrigin (return (SVarC origin v))
                 (const getParent)
-                (return (SVarC origin v))
-    loop {M = M} origToTarget
+    loop {M = M} origToTarget (return par)
                 (\s sv -> getChild sv s )
-                (return par)
