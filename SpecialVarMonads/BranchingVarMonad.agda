@@ -59,13 +59,13 @@ open import Util.Derivation
 
 
 module ConnectionOperations
-  {{stm : MonadSTM M' M}}
   {{isto : ISTO (V S)}}
   {{eq : Eq (V S)}}
-  {{bvm : ConstrDefVarMonad K M' V}}
   {{ks : K derives (\A -> K (A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A))) }}
-  {{mr : MonadReader (List (V S)) M}}
-  {{tvm : ThresholdVarMonad K M V}} where
+  {{bvm : ConstrDefVarMonad K M' V}}
+  {{stm : MonadSTM M' M}}
+  {{tvm : ThresholdVarMonad K M V}}
+  {{mr : MonadReader (List (V S)) M}} where
 
   open MonadReader {{...}} using (reader)
 
