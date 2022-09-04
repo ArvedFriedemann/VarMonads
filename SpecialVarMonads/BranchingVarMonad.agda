@@ -44,7 +44,7 @@ record BranchingVarMonad
     (V : Set -> Set) : Set where
   field
     tvm : ThresholdVarMonad K M V
-    scoped : ((forall {B} -> M B -> M B) -> M A) -> M A
+    branched : ((forall {B} -> M B -> M B) -> M A) -> M A
   open ThresholdVarMonad tvm public
 
 
@@ -169,4 +169,4 @@ module ConnectionOperations
   ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (SVar V S)
   ThresholdVarMonad=>BranchingVarMonad = record {
     tvm = {!!} ; --TODO : This should be created out of a constrained default new VarMonad
-    scoped = \m -> new >>= \vs -> local (vs ::_) (m (local (drop 1))) }
+    branched = \m -> new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }
