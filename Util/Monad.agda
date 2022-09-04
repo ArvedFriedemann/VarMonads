@@ -21,8 +21,8 @@ module _ {M : Set -> Set} {{mon : Monad M}} where
   when true m = void m
   when false m = return tt
 
-  loop : List A -> M B -> (A -> B -> M B) -> M B
-  loop {A} {B} lst def f = def >>= loop' lst f
+  loop : List A -> B -> (A -> B -> M B) -> M B
+  loop {A} {B} lst def f = loop' lst f def
     where
       loop' : List A -> (A -> B -> M B) -> B -> M B
       loop' [] f b0 = return b0

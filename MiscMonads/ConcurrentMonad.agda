@@ -26,6 +26,7 @@ record MonadSTM (M' M : Set -> Set) : Set where
   field
     atomically : M' A -> M A
     overlap {{mon}} : Monad M
+    overlap {{mon'}} : Monad M'    
 
 
 open MonadState {{...}} using (get; put; modify)

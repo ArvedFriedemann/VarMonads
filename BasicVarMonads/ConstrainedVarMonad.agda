@@ -28,8 +28,11 @@ record ConstrDefVarMonad
     write : {{k : K A}} -> V A -> A -> M T
     overlap {{mon}} : Monad M
 
+  modify : {{k : K A}} -> V A -> (A -> A -x- B) -> M B
+  modify v f = read v >>= \x -> write v (fst (f x)) >> return (snd (f x))
+
   modify' : {{k : K A}} -> V A -> (A -> A) -> M T
-  modify' v f = read v >>= write v o f
+  modify' v f = modify v ((_, tt) o f)
 
 record NewConstrDefVarMonad
     (K : Set -> Set)
@@ -40,6 +43,12 @@ record NewConstrDefVarMonad
     read : V A -> M A
     write : V A -> A -> M T
     overlap {{mon}} : Monad M
+
+  modify : V A -> (A -> A -x- B) -> M B
+  modify v f = read v >>= \x -> write v (fst (f x)) >> return (snd (f x))
+
+  modify' : V A -> (A -> A) -> M T
+  modify' v f = modify v ((_, tt) o f)
 
 --Free Constrained Default VarMonad
 data FCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where
