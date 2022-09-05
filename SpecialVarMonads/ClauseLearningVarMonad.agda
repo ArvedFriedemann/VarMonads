@@ -58,6 +58,8 @@ module ClauseLearning
     eqSig : {V : Set -> Set} -> {{PEq V}} -> Eq (Sigma Set V)
     eqSig = record { _==_ = \{(_ , v1) (_ , v2) -> v1 =p= v2 } }
 
+    -- TODO : the visited variables should be handed to the next branch as well, otherwise
+    -- we will visit variables several times...maybe do it with a loop?
     {-# TERMINATING #-}
     dfsFoldM : {{k : K A}} ->
       (forall {C} -> {{kc : K C}} -> C -> AsmPtr K V C -> List (M B) -> M B) ->
@@ -66,7 +68,13 @@ module ClauseLearning
       M B
     dfsFoldM f def (AsmPtrC v) = (fst <$> read v) >>= dfsFoldM' [] f def (AsmPtrC v)
       where
-        dfsFoldM' : {{k : K A}} -> List (Sigma Set V) -> (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List (M B) -> M B) -> B -> AsmPtr K V A -> A -> M B
+        dfsFoldM' : {{k : K A}} ->
+          List (Sigma Set V) ->
+          (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List (M B) -> M B) ->
+          B ->
+          AsmPtr K V A ->
+          A ->
+          M B
         dfsFoldM' visited f def (AsmPtrC v) x with (_ , v) elem visited withEq eqSig
         ...| true = return def
         ...| false = do
@@ -74,7 +82,9 @@ module ClauseLearning
           foldr (\cls _ -> f x (AsmPtrC v) $ map (\{(_ , k , x' , v') -> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'}) cls) (return def) asms
 
     deepestCut : {{k : K A}} -> AsmPtr K V A -> M (Clause K (AsmPtr K V))
-    deepestCut = dfsFoldM (\_ _ subclauses -> concat <$> sequenceM subclauses) []
+    deepestCut = dfsFoldM (\{
+      x v [] -> return [ _ , it , x , v ] ;
+      _ _ subclauses -> concat <$> sequenceM subclauses}) []
 
     clauseProp : {{k : K A}} -> {{K derives Eq}} -> A -> AsmPtr K V A -> Clause K (AsmPtr K V) -> M T
     clauseProp x (AsmPtrC v) clause = do
