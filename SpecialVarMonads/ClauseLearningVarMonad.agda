@@ -70,24 +70,24 @@ module ClauseLearning
                                   >>= dfsFoldM' [] f def (AsmPtrC v)
                                   >>= return o fst
       where
-        dfsFoldM' : {{k : K A}} ->
-          List (Sigma Set V) ->
-          (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List B -> B) ->
-          B ->
-          AsmPtr K V A ->
-          A ->
-          M (B -x- List (Sigma Set V))
-        dfsFoldM' visited f def (AsmPtrC v) x
-          with (_ , v) elem visited withEq eqSig
-        ...| true = return (def , visited)
-        ...| false = do
-          (_ , asms) <- read v
-          mapHead asms (return (def , visited)) \cls -> do
-            (lst , visited') <- loop cls ([] , visited)
-              \{(_ , k , x' , v') (lst , visited) ->
-                (map1 (_:: lst)) <$> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'
-              }
-            return (f x (AsmPtrC v) lst , visited')
+      dfsFoldM' : {{k : K A}} ->
+        List (Sigma Set V) ->
+        (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List B -> B) ->
+        B ->
+        AsmPtr K V A ->
+        A ->
+        M (B -x- List (Sigma Set V))
+      dfsFoldM' visited f def (AsmPtrC v) x
+        with (_ , v) elem visited withEq eqSig
+      ...| true = return (def , visited)
+      ...| false = do
+        (_ , asms) <- read v
+        mapHead asms (return (def , visited)) \cls -> do
+          (lst , visited') <- loop cls ([] , visited)
+            \{(_ , k , x' , v') (lst , visited) ->
+              (map1 (_:: lst)) <$> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'
+            }
+          return (f x (AsmPtrC v) lst , visited')
 
     deepestCut : {{k : K A}} -> AsmPtr K V A -> M (Clause K (AsmPtr K V))
     deepestCut = dfsFoldM (\{
