@@ -8,21 +8,18 @@ private
     A B : Set
     M V F K : Set -> Set
 
-Assignment : (K : Set -> Set) (V : Set -> Set) -> Set
+Assignment : (K : Set -> Set) -> (V : Set -> Set) -> Set
 Assignment K V = Sigma Set \A -> K A -x- A -x- V A
 
 Clause : (K : Set -> Set) -> (V : Set -> Set) -> Set
 Clause K V = List (Assignment K V)
 
---AsmPtr : (V : Set -> Set) -> (A : Set) -> Set
---AsmPtr V A = V (A -x- List (Clause V))
+--AsmPtr : (K : Set -> Set) -> (V : Set -> Set) -> (A : Set) -> Set
+--AsmPtr K V A = V (A -x- List (Clause K V))
 
 {-# NO_POSITIVITY_CHECK #-}
-record AsmPtr (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
-  constructor AsmPtrC
-  inductive
-  field
-    p : V (A -x- List (Clause K (AsmPtr K V)))
+data AsmPtr (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
+  AsmPtrC : V (A -x- List (Clause K (AsmPtr K V))) -> AsmPtr K V A
 
 
 --open import BasicVarMonads.ThresholdVarMonad
@@ -51,6 +48,7 @@ module ClauseLearning
 
 
   open import Util.PointerEquality
+  open import Util.Lists
   open PEq {{...}}
 
   module _ {{eq : PEq V}} where
@@ -79,7 +77,9 @@ module ClauseLearning
         ...| true = return def
         ...| false = do
           (_ , asms) <- read v
-          foldr (\cls _ -> f x (AsmPtrC v) $ map (\{(_ , k , x' , v') -> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'}) cls) (return def) asms
+          mapHead asms (return def) \cls ->
+            f x (AsmPtrC v) $ map (\{(_ , k , x' , v') ->
+              dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'}) cls
 
     deepestCut : {{k : K A}} -> AsmPtr K V A -> M (Clause K (AsmPtr K V))
     deepestCut = dfsFoldM (\{
