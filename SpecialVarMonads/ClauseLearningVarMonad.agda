@@ -59,18 +59,27 @@ module ClauseLearning
     eqSig = record { _==_ = \{(_ , v1) (_ , v2) -> v1 =p= v2 } }
 
     {-# TERMINATING #-}
-    dfsFoldM : {{ka : K A}} -> (forall {C} -> C -> List (M B) -> M B) -> B -> AsmPtr K V A -> A -> M B
-    dfsFoldM = dfsFoldM' []
+    dfsFoldM : {{k : K A}} ->
+      (forall {C} -> {{kc : K C}} -> C -> AsmPtr K V C -> List (M B) -> M B) ->
+      B ->
+      AsmPtr K V A ->
+      M B
+    dfsFoldM f def (AsmPtrC v) = (fst <$> read v) >>= dfsFoldM' [] f def (AsmPtrC v)
       where
-        dfsFoldM' : {{ka : K A}} -> List (Sigma Set V) -> (forall {C} -> C -> List (M B) -> M B) -> B -> AsmPtr K V A -> A -> M B
+        dfsFoldM' : {{k : K A}} -> List (Sigma Set V) -> (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List (M B) -> M B) -> B -> AsmPtr K V A -> A -> M B
         dfsFoldM' visited f def (AsmPtrC v) x with (_ , v) elem visited withEq eqSig
         ...| true = return def
         ...| false = do
           (_ , asms) <- read v
-          foldr (\cls _ -> f x $ map (\{(_ , k , x' , v') -> dfsFoldM' {{ka = k}} ((_ , v) :: visited) f def v' x'}) cls) (return def) asms
+          foldr (\cls _ -> f x (AsmPtrC v) $ map (\{(_ , k , x' , v') -> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'}) cls) (return def) asms
 
-    --deepestCut : AsmPtr V A ->
+    deepestCut : {{k : K A}} -> AsmPtr K V A -> M (Clause K (AsmPtr K V))
+    deepestCut = dfsFoldM (\_ _ subclauses -> concat <$> sequenceM subclauses) []
 
+    clauseProp : {{k : K A}} -> {{K derives Eq}} -> A -> AsmPtr K V A -> Clause K (AsmPtr K V) -> M T
+    clauseProp x (AsmPtrC v) clause = do
+      match <- mapM (\{(_ , k , x' , (AsmPtrC v')) -> let instance _ = k in (x' ==_) o fst <$> read v'}) clause
+      if all id match then write v (x , []) else return tt
 
 -- TODO : Monad with state to track variables and put clauses on assigning variables
 -- eventually, real clause learning algorithm.

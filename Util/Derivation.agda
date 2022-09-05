@@ -2,7 +2,7 @@
 module Util.Derivation where
 
 _derives_ : (Set -> Set) -> (Set -> Set) -> Set
-K derives P = forall {A} -> {{K A}} -> P A
+K derives P = forall {A} -> {{k : K A}} -> P A
 
 always : (Set -> Set) -> Set
 always K = forall {A} -> K A
