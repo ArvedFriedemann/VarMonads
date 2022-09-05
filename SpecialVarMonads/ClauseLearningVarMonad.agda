@@ -49,6 +49,7 @@ module ClauseLearning
 
   open import Util.PointerEquality
   open import Util.Lists
+  open import Util.Monad
   open PEq {{...}}
 
   module _ {{eq : PEq V}} where
@@ -57,34 +58,41 @@ module ClauseLearning
     eqSig = record { _==_ = \{(_ , v1) (_ , v2) -> v1 =p= v2 } }
 
     -- TODO : the visited variables should be handed to the next branch as well, otherwise
-    -- we will visit variables several times...maybe do it with a loop?
+    -- we will visit variables several times...problem: this cannot be done properly as it is not
+    -- known in which order they will be accessed
     {-# TERMINATING #-}
     dfsFoldM : {{k : K A}} ->
-      (forall {C} -> {{kc : K C}} -> C -> AsmPtr K V C -> List (M B) -> M B) ->
+      (forall {C} -> {{kc : K C}} -> C -> AsmPtr K V C -> List B -> B) ->
       B ->
       AsmPtr K V A ->
       M B
-    dfsFoldM f def (AsmPtrC v) = (fst <$> read v) >>= dfsFoldM' [] f def (AsmPtrC v)
+    dfsFoldM f def (AsmPtrC v) = (fst <$> read v)
+                                  >>= dfsFoldM' [] f def (AsmPtrC v)
+                                  >>= return o fst
       where
         dfsFoldM' : {{k : K A}} ->
           List (Sigma Set V) ->
-          (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List (M B) -> M B) ->
+          (forall {C} -> {{kc : K C}} ->  C -> AsmPtr K V C -> List B -> B) ->
           B ->
           AsmPtr K V A ->
           A ->
-          M B
-        dfsFoldM' visited f def (AsmPtrC v) x with (_ , v) elem visited withEq eqSig
-        ...| true = return def
+          M (B -x- List (Sigma Set V))
+        dfsFoldM' visited f def (AsmPtrC v) x
+          with (_ , v) elem visited withEq eqSig
+        ...| true = return (def , visited)
         ...| false = do
           (_ , asms) <- read v
-          mapHead asms (return def) \cls ->
-            f x (AsmPtrC v) $ map (\{(_ , k , x' , v') ->
-              dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'}) cls
+          mapHead asms (return (def , visited)) \cls -> do
+            (lst , visited') <- loop cls ([] , visited)
+              \{(_ , k , x' , v') (lst , visited) ->
+                (map1 (_:: lst)) <$> dfsFoldM' {{k = k}} ((_ , v) :: visited) f def v' x'
+              }
+            return (f x (AsmPtrC v) lst , visited')
 
     deepestCut : {{k : K A}} -> AsmPtr K V A -> M (Clause K (AsmPtr K V))
     deepestCut = dfsFoldM (\{
-      x v [] -> return [ _ , it , x , v ] ;
-      _ _ subclauses -> concat <$> sequenceM subclauses}) []
+      x v [] -> [ _ , it , x , v ] ;
+      _ _ subclauses -> concat subclauses}) []
 
     clauseProp : {{k : K A}} -> {{K derives Eq}} -> A -> AsmPtr K V A -> Clause K (AsmPtr K V) -> M T
     clauseProp x (AsmPtrC v) clause = do
