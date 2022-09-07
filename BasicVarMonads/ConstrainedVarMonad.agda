@@ -6,7 +6,7 @@ open import AgdaAsciiPrelude.AsciiPrelude
 private
   variable
     A B : Set
-    K M V : Set -> Set
+    K M M' V : Set -> Set
 
 record ConstrVarMonad
     (K : Set -> Set)
@@ -17,6 +17,16 @@ record ConstrVarMonad
     read : {{k : K A}} -> V A -> M A
     write : {{k : K A}} -> V A -> A -> M T
     overlap {{mon}} : Monad M
+
+liftConstrVarMonad : {{mon : Monad M'}} ->
+  ConstrVarMonad K M V ->
+  (forall {A} -> M A -> M' A) ->
+  ConstrVarMonad K M' V
+liftConstrVarMonad cvm liftT = record {
+    new = liftT o new ;
+    read = liftT o read ;
+    write = \v x -> liftT (write v x) }
+  where open ConstrVarMonad cvm
 
 record ConstrDefVarMonad
     (K : Set -> Set)
@@ -34,6 +44,16 @@ record ConstrDefVarMonad
   modify' : {{k : K A}} -> V A -> (A -> A) -> M T
   modify' v f = modify v ((_, tt) o f)
 
+liftConstrDefVarMonad : {{mon : Monad M'}} ->
+  ConstrDefVarMonad K M V ->
+  (forall {A} -> M A -> M' A) ->
+  ConstrDefVarMonad K M' V
+liftConstrDefVarMonad cvm liftT = record {
+    new = liftT new ;
+    read = liftT o read ;
+    write = \v x -> liftT (write v x) }
+  where open ConstrDefVarMonad cvm
+
 record NewConstrDefVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
@@ -49,6 +69,16 @@ record NewConstrDefVarMonad
 
   modify' : V A -> (A -> A) -> M T
   modify' v f = modify v ((_, tt) o f)
+
+liftNewConstrDefVarMonad : {{mon : Monad M'}} ->
+  NewConstrDefVarMonad K M V ->
+  (forall {A} -> M A -> M' A) ->
+  NewConstrDefVarMonad K M' V
+liftNewConstrDefVarMonad cvm liftT = record {
+    new = liftT new ;
+    read = liftT o read ;
+    write = \v -> liftT o write v }
+  where open NewConstrDefVarMonad cvm
 
 --Free Constrained Default VarMonad
 data FCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where

@@ -11,7 +11,7 @@ open import Util.Lattice
 private
   variable
     A B C : Set
-    M V V' K : Set -> Set
+    M M' V V' K : Set -> Set
 
 record BijTFunc (A : Set) (B : Set) : Set where
   constructor _<,>_
@@ -67,6 +67,16 @@ record ThresholdVarMonad
 
   sameOrigT : V A -> V B -> Set
   sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
+
+liftThresholdVarMonad : {{mon : Monad M'}} ->
+  ThresholdVarMonad K M V ->
+  (forall {A} -> M A -> M' A) ->
+  ThresholdVarMonad K M' V
+liftThresholdVarMonad tvm liftT = record {
+    cvm = liftNewConstrDefVarMonad cvm liftT ;
+    tvbf = tvbf ;
+    transOf = transOf }
+  where open ThresholdVarMonad tvm
 
 FreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
   ThresholdVarMonad K (FNCDVarMon K (TVar K V)) (TVar K V)
