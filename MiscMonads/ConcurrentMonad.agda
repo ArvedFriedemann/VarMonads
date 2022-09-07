@@ -26,7 +26,7 @@ record MonadSTM (M' M : Set -> Set) : Set where
   field
     atomically : M' A -> M A
     overlap {{mon}} : Monad M
-    overlap {{mon'}} : Monad M'    
+    overlap {{mon'}} : Monad M'
 
 
 open MonadState {{...}} using (get; put; modify)
@@ -52,6 +52,12 @@ data FMFT (M : Set -> Set) : Set -> Set where
   forkF : FMFT M A -> FMFT M T
   returnF : A -> FMFT M A
   bindF : FMFT M A -> (A -> FMFT M B) -> FMFT M B
+
+FMFTMonadFork : {{mon : Monad M}} -> MonadFork (FMFT M)
+FMFTMonadFork = record {
+    fork = forkF ;
+    mon = record { return = returnF ; _>>=_ = bindF }
+  }
 
 runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
 runFMFT (liftF m) = (_, []) <$> m
