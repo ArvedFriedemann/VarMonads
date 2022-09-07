@@ -25,6 +25,18 @@ record NatPtr (A : Set) : Set where
 
 open NatPtr public
 
+STONatPtr : Set -> StrictTotalOrder _ _ _
+STONatPtr A = record {
+  Carrier = NatPtr A ;
+  _≈_ = \ {(ptr x1) (ptr x2) -> x1 === x2} ;
+  _<_ = \ {(ptr x1) (ptr x2) -> x1 < x2} ;
+  isStrictTotalOrder = record {
+    isEquivalence = record { refl = refl ; sym = sym ; trans = trans } ;
+    trans = <-trans ;
+    compare = \ {(ptr x1) (ptr x2) -> <-cmp x1 x2 } } }
+
+ISTONatPtr : ISTO (NatPtr A)
+ISTONatPtr {A} = STO-to-ISTO (STONatPtr A)
 
 defaultState : Set
 defaultState = Nat -x- Map Nat (Sigma Set id)
