@@ -97,7 +97,7 @@ module ClauseLearning
     clauseProp : {{k : K A}} -> {{K derives Eq}} -> A -> AsmPtr K V A -> Clause K (AsmPtr K V) -> M T
     clauseProp x (AsmPtrC v) clause = do
       match <- mapM (\{(_ , k , x' , (AsmPtrC v')) -> let instance _ = k in (x' ==_) o fst <$> read v'}) clause
-      when (all id match) (write v (x , []))
+      when (all id match) (write v (x , [ clause ]))
 
 -- TODO : Monad with state to track variables and put clauses on assigning variables
 -- eventually, real clause learning algorithm.

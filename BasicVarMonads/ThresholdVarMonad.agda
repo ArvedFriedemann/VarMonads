@@ -11,7 +11,7 @@ open import Util.Lattice
 private
   variable
     A B C : Set
-    M V K : Set -> Set
+    M V V' K : Set -> Set
 
 record BijTFunc (A : Set) (B : Set) : Set where
   constructor _<,>_
@@ -29,8 +29,8 @@ record TVar (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
   field
     OrigT : Set
     {{origK}} : K OrigT
-    OVar : V OrigT
     f : BijTFunc OrigT A
+    OVar : V OrigT
 
 instance
   monadMaybe = MonadMaybe
@@ -39,7 +39,7 @@ _<o>_ : BijTFunc B C -> BijTFunc A B -> BijTFunc A C
 _<o>_ (BtoC <,> CtoB) (AtoB <,> BtoA) = (BtoC <=< AtoB) <,> (BtoA o CtoB)
 
 _<$o$>_ : BijTFunc A B -> TVar K V A -> TVar K V B
-_<$o$>_ t (TVarC T v f) = TVarC T v (t <o> f)
+_<$o$>_ t (TVarC T f v) = TVarC T (t <o> f) v
 
 
 TVarBijTFunctor : BijTFunctor (TVar K V)
@@ -64,3 +64,26 @@ record ThresholdVarMonad
 
   sameOrigT : V A -> V B -> Set
   sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
+
+module _ {{tvm : ThresholdVarMonad K M V}}
+          {{cvm : ConstrDefVarMonad K M V'}} where
+
+  open ThresholdVarMonad tvm renaming (new to newT; read to readT; write to writeT; cvm to cvmT)
+  open ConstrDefVarMonad cvm renaming (new to newC; read to readC; write to writeC)
+
+  private
+    variable
+      PContT : Set -> Set
+
+  ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad :
+    (forall {A} -> (V' A) -> V (PContT A)) ->
+    (forall {A B} -> BijTFunc A B -> BijTFunc (PContT A) B) ->
+    ThresholdVarMonad K M (TVar K V')
+  ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
+    retrieve bijTtrans = record {
+      cvm = record {
+        new = TVarC _ (just <,> id) <$> newC ;
+        read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
+        write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
+      tvbf = TVarBijTFunctor ;
+      transOf = \{(TVarC T f v) -> TVarC T f (TVarC T (just <,> id) v)} }
