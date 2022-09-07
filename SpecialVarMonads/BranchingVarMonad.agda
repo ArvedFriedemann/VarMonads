@@ -39,7 +39,7 @@ onSVarV f (SVarC _ v) = f v
 open import BasicVarMonads.ThresholdVarMonad
 
 SVarBijTFunc : {{sto : ISTO (V S)}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) B
-SVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty _ , nothing
+SVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty , nothing
 
 record BranchingVarMonad
     (K : Set -> Set)
@@ -111,15 +111,15 @@ module ConnectionOperations
       (x , mp , par) <- read v
       (SVarC pp vp) <- fromMaybe (newSVar pathTail) (return <$> par)
       write v (x , mp , just (SVarC pp vp))
-      modify' vp \{(a , mp , par) -> (a , insert _ vs (SVarC pp vp) mp , par)}
+      modify' vp \{(a , mp , par) -> (a , insert vs (SVarC pp vp) mp , par)}
       return (is-nothing par , (SVarC pp vp))
 
     getChildAndCreated? : {{k : K A}} ->
       V S -> SVar V S A -> M (Bool -x- SVar V S A)
     getChildAndCreated? vs (SVarC path v) = atomically do
       (x , mp , par) <- read v
-      (SVarC pc vc) <- fromMaybe (newSVar (vs :: path)) (return <$> lookup _ vs mp)
-      write v (x , insert _ vs (SVarC pc vc) mp , par)
+      (SVarC pc vc) <- fromMaybe (newSVar (vs :: path)) (return <$> lookup vs mp)
+      write v (x , insert vs (SVarC pc vc) mp , par)
       modify' vc \{(a , mp , par) -> (a , mp , just (SVarC path v))}
       return (is-nothing par , (SVarC pc vc))
 
