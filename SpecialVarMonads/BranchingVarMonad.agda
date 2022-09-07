@@ -38,6 +38,9 @@ onSVarV f (SVarC _ v) = f v
 
 open import BasicVarMonads.ThresholdVarMonad
 
+SVarBijTFunc : {{sto : ISTO (V S)}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) B
+SVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty _ , nothing
+
 record BranchingVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
@@ -166,7 +169,12 @@ module ConnectionOperations
     write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
                     atomically (modifyAtom' v (map1 (const x) )) } }
 
-  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (SVar V S)
+  instance
+    _ = CDVM
+
+  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S))
   ThresholdVarMonad=>BranchingVarMonad = record {
-    tvm = {!!} ; --TODO : This should be created out of a constrained default new VarMonad
+    tvm = ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
+            SVar.var
+            SVarBijTFunc ;
     branched = \m -> new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }
