@@ -45,6 +45,9 @@ _<$o$>_ t (TVarC T f v) = TVarC T (t <o> f) v
 TVarBijTFunctor : BijTFunctor (TVar K V)
 TVarBijTFunctor = record { _<bt$>_ = _<$o$>_ }
 
+stdTransOf : TVar K V A -> TVar K (TVar K V) A
+stdTransOf (TVarC T f v) = TVarC T f (TVarC T (just <,> id) v)
+
 record ThresholdVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
@@ -64,6 +67,13 @@ record ThresholdVarMonad
 
   sameOrigT : V A -> V B -> Set
   sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
+
+FreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
+  ThresholdVarMonad K (FNCDVarMon K (TVar K V)) (TVar K V)
+FreeThresholdVarMonad = record {
+  cvm = FNCDVarMonNewConstrDefVarMonad ;
+  tvbf = TVarBijTFunctor ;
+  transOf = stdTransOf }
 
 module _ {{tvm : ThresholdVarMonad K M V}}
           {{cvm : ConstrDefVarMonad K M V'}} where
@@ -86,4 +96,4 @@ module _ {{tvm : ThresholdVarMonad K M V}}
         read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
       tvbf = TVarBijTFunctor ;
-      transOf = \{(TVarC T f v) -> TVarC T f (TVarC T (just <,> id) v)} }
+      transOf = stdTransOf }

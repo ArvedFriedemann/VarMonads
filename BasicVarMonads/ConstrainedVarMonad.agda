@@ -57,3 +57,19 @@ data FCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where
   writeF : {{k : K A}} -> V A -> A -> FCDVarMon K V T
   returnF : A -> FCDVarMon K V A
   bindF : FCDVarMon K V A -> (A -> FCDVarMon K V B) -> FCDVarMon K V B
+
+data FNCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where
+  newF : {{k : K A}} -> FNCDVarMon K V (V A)
+  readF : V A -> FNCDVarMon K V A
+  writeF : V A -> A -> FNCDVarMon K V T
+  returnF : A -> FNCDVarMon K V A
+  bindF : FNCDVarMon K V A -> (A -> FNCDVarMon K V B) -> FNCDVarMon K V B
+
+FNCDVarMonNewConstrDefVarMonad : NewConstrDefVarMonad K (FNCDVarMon K V) V
+FNCDVarMonNewConstrDefVarMonad = record {
+  new = newF ;
+  read = readF ;
+  write = writeF ;
+  mon = record {
+    return = returnF ;
+    _>>=_ = bindF } }
