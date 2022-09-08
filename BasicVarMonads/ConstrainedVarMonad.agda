@@ -19,10 +19,10 @@ record ConstrVarMonad
     overlap {{mon}} : Monad M
 
 liftConstrVarMonad : {{mon : Monad M'}} ->
-  ConstrVarMonad K M V ->
   (forall {A} -> M A -> M' A) ->
+  ConstrVarMonad K M V ->
   ConstrVarMonad K M' V
-liftConstrVarMonad cvm liftT = record {
+liftConstrVarMonad liftT cvm = record {
     new = liftT o new ;
     read = liftT o read ;
     write = \v x -> liftT (write v x) }
@@ -45,10 +45,10 @@ record ConstrDefVarMonad
   modify' v f = modify v ((_, tt) o f)
 
 liftConstrDefVarMonad : {{mon : Monad M'}} ->
-  ConstrDefVarMonad K M V ->
   (forall {A} -> M A -> M' A) ->
+  ConstrDefVarMonad K M V ->
   ConstrDefVarMonad K M' V
-liftConstrDefVarMonad cvm liftT = record {
+liftConstrDefVarMonad liftT cvm = record {
     new = liftT new ;
     read = liftT o read ;
     write = \v x -> liftT (write v x) }
@@ -71,10 +71,10 @@ record NewConstrDefVarMonad
   modify' v f = modify v ((_, tt) o f)
 
 liftNewConstrDefVarMonad : {{mon : Monad M'}} ->
-  NewConstrDefVarMonad K M V ->
   (forall {A} -> M A -> M' A) ->
+  NewConstrDefVarMonad K M V ->
   NewConstrDefVarMonad K M' V
-liftNewConstrDefVarMonad cvm liftT = record {
+liftNewConstrDefVarMonad liftT cvm = record {
     new = liftT new ;
     read = liftT o read ;
     write = \v -> liftT o write v }
@@ -103,3 +103,8 @@ FNCDVarMonNewConstrDefVarMonad = record {
   mon = record {
     return = returnF ;
     _>>=_ = bindF } }
+
+MonadFNCDVarMon : Monad (FNCDVarMon K V)
+MonadFNCDVarMon = record {
+  return = returnF ;
+  _>>=_ = bindF }

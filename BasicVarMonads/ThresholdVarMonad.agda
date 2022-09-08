@@ -69,11 +69,11 @@ record ThresholdVarMonad
   sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
 
 liftThresholdVarMonad : {{mon : Monad M'}} ->
-  ThresholdVarMonad K M V ->
   (forall {A} -> M A -> M' A) ->
+  ThresholdVarMonad K M V ->
   ThresholdVarMonad K M' V
-liftThresholdVarMonad tvm liftT = record {
-    cvm = liftNewConstrDefVarMonad cvm liftT ;
+liftThresholdVarMonad liftT tvm = record {
+    cvm = liftNewConstrDefVarMonad liftT cvm ;
     tvbf = tvbf ;
     transOf = transOf }
   where open ThresholdVarMonad tvm

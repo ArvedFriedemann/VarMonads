@@ -2,9 +2,11 @@
 module Assembly.VarMonadAssemblies where
 
 open import AgdaAsciiPrelude.AsciiPrelude
+open import AgdaAsciiPrelude.Instances
 open import Assembly.StdVarMonad
 open import BasicVarMonads.Constructions
 open import BasicVarMonads.ThresholdVarMonad
+open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Lattice
 open import SpecialVarMonads.BranchingVarMonad
 open ConnectionOperations
@@ -12,7 +14,8 @@ open import MiscMonads.ConcurrentMonad
 
 private
   variable
-    A : Set
+    A S : Set
+    K M V : Set -> Set
 
 stdK = \A -> Eq A -x- BoundedMeetSemilattice A
 
@@ -27,8 +30,14 @@ record UniversalVarMonad (K M V : Set -> Set) : Set where
 
 instance
   istoNP = ISTONatPtr
+  _ = MonadStateT
+  _ = MonadReaderStateT
+  _ = MonadFNCDVarMon
+
+readerTVM : {{mon : Monad M}} -> ThresholdVarMonad K M V -> ThresholdVarMonad K (StateT (List (V S)) M) V
+readerTVM = liftThresholdVarMonad \m s -> (_, s) <$> m
 
 stdUniversalVarMonad : UniversalVarMonad stdK _ _
 stdUniversalVarMonad = record {
-  bvm = {! ThresholdVarMonad=>BranchingVarMonad {{tvm = FreeThresholdVarMonad}}  !} ;
+  bvm = {! ThresholdVarMonad=>BranchingVarMonad {{tvm = readerTVM FreeThresholdVarMonad}}  !} ;
   mf = {!   !} }
