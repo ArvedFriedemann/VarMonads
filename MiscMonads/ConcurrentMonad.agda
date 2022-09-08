@@ -28,6 +28,8 @@ record MonadSTM (M' M : Set -> Set) : Set where
     overlap {{mon}} : Monad M
     overlap {{mon'}} : Monad M'
 
+PlainMonadSTM : {{mon : Monad M}} -> MonadSTM M M
+PlainMonadSTM = record { atomically = id }
 
 open MonadState {{...}} using (get; put; modify)
 {-}

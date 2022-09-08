@@ -8,6 +8,7 @@ open import BasicVarMonads.Constructions
 open import BasicVarMonads.ThresholdVarMonad
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Lattice
+open import Util.Derivation
 open import SpecialVarMonads.BranchingVarMonad
 open ConnectionOperations
 open import MiscMonads.ConcurrentMonad
@@ -18,6 +19,13 @@ private
     K M V : Set -> Set
 
 stdK = \A -> Eq A -x- BoundedMeetSemilattice A
+
+instance
+  stdKEq : stdK derives Eq
+  stdKEq {{k}} = fst k
+
+  stdKBoundedMeetSemilattice : stdK derives BoundedMeetSemilattice
+  stdKBoundedMeetSemilattice {{k}} = snd k
 
 stdLatMon = BaseVarMonad=>ConstrVarMonad {K = stdK} {{defaultVarMonad}}
 
@@ -33,6 +41,14 @@ instance
   _ = MonadStateT
   _ = MonadReaderStateT
   _ = MonadFNCDVarMon
+  _ = PlainMonadSTM
+
+  ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
+  ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
+      new = new ;
+      read = read ;
+      write = write }
+    where open ThresholdVarMonad tvm
 
 readerTVM : {{mon : Monad M}} -> ThresholdVarMonad K M V -> ThresholdVarMonad K (StateT (List (V S)) M) V
 readerTVM = liftThresholdVarMonad \m s -> (_, s) <$> m
