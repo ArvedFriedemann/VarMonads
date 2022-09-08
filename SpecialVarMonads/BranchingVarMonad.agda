@@ -8,7 +8,7 @@ open import Util.Monad
 
 private
   variable
-    A B S : Set
+    A B S VS : Set
     M M' M'' V K : Set -> Set
 
 record StateCpyVarMonad
@@ -51,12 +51,31 @@ SVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty , nothing
 record BranchingVarMonad
     (K : Set -> Set)
     (M : Set -> Set)
-    (V : Set -> Set) : Set where
+    (V : Set -> Set)
+    (VS : Set) : Set where
+  inductive
   field
     tvm : ThresholdVarMonad K M V
-    branched : ((forall {B} -> M B -> M B) -> M A) -> M A
+    overlap {{mr}} : MonadReader (List VS) M
+    branchedLift :
+      {{mon : Monad M'}} ->
+      {{mr : MonadReader (List VS) M' }} ->
+      (forall {A} -> M A -> M' A) ->
+      ((forall {B} -> M' B -> M' B) -> M' A) ->
+      M' A
   open ThresholdVarMonad tvm public
+  branched : ((forall {B} -> M B -> M B) -> M A) -> M A
+  branched = branchedLift id
 
+liftBranchingVarMonad :
+  {{mon : Monad M'}} ->
+  {{mr : MonadReader (List VS) M'}} ->
+  (forall {A} -> M A -> M' A) ->
+  BranchingVarMonad K M V VS -> BranchingVarMonad K M' V VS
+liftBranchingVarMonad liftT bvm = record {
+  tvm = liftThresholdVarMonad liftT tvm ;
+  branchedLift = \liftT2 -> branchedLift (liftT2 o liftT) }
+  where open BranchingVarMonad bvm
 
 afterInitEqSegment : {{eq : Eq A}} -> List A -> List A -> (List A -x- List A)
 afterInitEqSegment [] ys = ([] , ys)
@@ -179,9 +198,9 @@ module ConnectionOperations
   instance
     _ = CDVM
 
-  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S))
+  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)
   ThresholdVarMonad=>BranchingVarMonad = record {
     tvm = ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
             SVar.var
             SVarBijTFunc ;
-    branched = \m -> new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }
+    branchedLift = \liftT m -> liftT new >>= \vs -> local (vs ::_) (m (local $ drop 1))  }--new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }

@@ -61,6 +61,11 @@ FMFTMonadFork = record {
     mon = record { return = returnF ; _>>=_ = bindF }
   }
 
+FMFTMonad : Monad (FMFT M)
+FMFTMonad = record {
+  return = returnF ;
+  _>>=_ = bindF }
+
 runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
 runFMFT (liftF m) = (_, []) <$> m
 runFMFT (forkF m) = return (tt , [])

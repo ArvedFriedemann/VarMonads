@@ -80,9 +80,9 @@ instance
 
 stdLatMon = BaseVarMonad=>ConstrVarMonad {K = stdK} {{defaultVarMonad}}
 
-record UniversalVarMonad (K M V : Set -> Set) : Set where
+record UniversalVarMonad (K M V : Set -> Set) (VS : Set) : Set where
   field
-    bvm : BranchingVarMonad K M V
+    bvm : BranchingVarMonad K M V VS
     mf : MonadFork M
   open BranchingVarMonad bvm public
   open MonadFork mf public
@@ -121,6 +121,22 @@ stdBranchingVarMonad = let tvm = readerTVM (FreeThresholdVarMonad {V = NatPtr}) 
           {{bvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
           {{tvm = tvm }}
 
---open import MiscMonads.ConcurrentMonad
+open import MiscMonads.ConcurrentMonad
 
---stdForkingVarMonad = liftThresholdVarMonad liftF stdBranchingVarMonad
+instance
+  _ = FMFTMonad
+
+  FMFTMonadRead : {{mr : MonadReader S M}} -> MonadReader S (FMFT M)
+  FMFTMonadRead {S = S} {M = M} = record {
+    monad = FMFTMonad ;
+    reader = \f ->  liftF (reader f) ;
+    local = local'}
+    where
+      open MonadReader {{...}}
+      local' : (S -> S) -> FMFT M A -> FMFT M A
+      local' f (liftF x) = liftF (local f x)
+      local' f (forkF m) = forkF (local' f m)
+      local' f (returnF x) = returnF x
+      local' f (bindF m mf) = bindF (local' f m) (local' f o mf)
+
+stdForkingVarMonad = liftBranchingVarMonad liftF stdBranchingVarMonad
