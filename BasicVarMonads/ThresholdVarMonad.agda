@@ -48,6 +48,17 @@ TVarBijTFunctor = record { _<bt$>_ = _<$o$>_ }
 stdTransOf : TVar K V A -> TVar K (TVar K V) A
 stdTransOf (TVarC T f v) = TVarC T f (TVarC T (just <,> id) v)
 
+open import Util.PointerEquality
+
+ISTOTVar :
+  {{isto : ISTO (Sigma Set V)}} ->
+  ISTO (Sigma Set (TVar K V))
+ISTOTVar = ExtractISTOFrom \{(TVarC _ _ v) -> _ , v}
+
+PEqTVar : {{peq : PEq V}} -> PEq (TVar K V)
+PEqTVar {{peq}} = record { _=p=_ = \{(TVarC _ _ v1) (TVarC _ _ v2) -> v1 =p= v2 } }
+  where open PEq peq
+
 record ThresholdVarMonad
     (K : Set -> Set)
     (M : Set -> Set)

@@ -36,6 +36,13 @@ SVarPType V S A = A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A)
 onSVarV : {{sto : ISTO (V S)}} -> (V (SVarPType V S A) -> B) -> SVar V S A -> B
 onSVarV f (SVarC _ v) = f v
 
+open import Util.PointerEquality
+
+ISTOSVar :
+  {{isto : ISTO (Sigma Set V)}} ->
+  {{isto : ISTO (V S)}} -> ISTO (Sigma Set (SVar V S))
+ISTOSVar = ExtractISTOFrom \{(SVarC _ v) -> _ , v}
+
 open import BasicVarMonads.ThresholdVarMonad
 
 SVarBijTFunc : {{sto : ISTO (V S)}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) B

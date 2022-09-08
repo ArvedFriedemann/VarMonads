@@ -25,18 +25,26 @@ record NatPtr (A : Set) : Set where
 
 open NatPtr public
 
-STONatPtr : Set -> StrictTotalOrder _ _ _
-STONatPtr A = record {
-  Carrier = NatPtr A ;
-  _≈_ = \ {(ptr x1) (ptr x2) -> x1 === x2} ;
-  _<_ = \ {(ptr x1) (ptr x2) -> x1 < x2} ;
+STONatPtr : StrictTotalOrder _ _ _
+STONatPtr = record {
+  Carrier = Sigma Set NatPtr ;
+  _≈_ = \ {(_ , ptr x1) (_ , ptr x2) -> x1 === x2} ;
+  _<_ = \ {(_ , ptr x1) (_ , ptr x2) -> x1 < x2} ;
   isStrictTotalOrder = record {
     isEquivalence = record { refl = refl ; sym = sym ; trans = trans } ;
     trans = <-trans ;
-    compare = \ {(ptr x1) (ptr x2) -> <-cmp x1 x2 } } }
+    compare = \ {(_ , ptr x1) (_ , ptr x2) -> <-cmp x1 x2 } } }
 
-ISTONatPtr : ISTO (NatPtr A)
-ISTONatPtr {A} = STO-to-ISTO (STONatPtr A)
+ISTONatPtr : ISTO (Sigma Set NatPtr)
+ISTONatPtr = STO-to-ISTO (STONatPtr)
+
+open import Util.PointerEquality
+
+PEqNatPtr : PEq NatPtr
+PEqNatPtr = record { _=p=_ = \{(ptr p1) (ptr p2) -> p1 == p2} }
+  where
+    instance
+      _ = eqNat
 
 defaultState : Set
 defaultState = Nat -x- Map Nat (Sigma Set id)
