@@ -186,8 +186,9 @@ runFNCDVarMon = runFNCD {K = stdK}
 instance
   _ = stdSpecModifyVarMonad
 
-runStdForkingVarMonad : stdForkingVarMonadM B -> (Maybe B -> defaultVarMonadStateM A) -> A
-runStdForkingVarMonad m r = runDefVarMonad $ runPropagation >>= r
-  where
-    runPropagation = propagate $ runFNCD {M = stdSpecMonad} (fst <$> propagate m [])
+runStdForkingVarMonad : stdForkingVarMonadM B -> (B -> stdForkingVarMonadM A) -> Maybe A
+runStdForkingVarMonad m r = runDefVarMonad $
+                              propagate $
+                              runFNCD {M = stdSpecMonad}
+                                (fst <$> (propagate m >>= propagate o r) [])
 --{M = stdSpecMonad} {{mvm = stdSpecModifyVarMonad }} {{mf = FMFTMonadFork }}
