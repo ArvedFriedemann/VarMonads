@@ -8,6 +8,7 @@ open import Assembly.StdVarMonad
 open import BasicVarMonads.Constructions
 open import BasicVarMonads.ThresholdVarMonad
 open import BasicVarMonads.ConstrainedVarMonad
+open import BasicVarMonads.ModifyVarMonad
 open import Util.Lattice
 open import Util.Derivation
 open import Util.PointerEquality
@@ -96,6 +97,8 @@ instance
   _ = MonadStateTId
   _ = MonadFNCDVarMon
   _ = PlainMonadSTM
+  _ = FMFTMonad
+  _ = FMFTMonadFork
   _ = ISTOTVar
   _ = ISTOSVar
   _ = PEqToEq
@@ -117,6 +120,9 @@ open ConnectionOperations
 
 stdSpecMonad : Set -> Set
 stdSpecMonad = FMFT defaultVarMonadStateM
+
+stdSpecModifyVarMonad : ModifyVarMonad stdSpecMonad NatPtr
+stdSpecModifyVarMonad = liftModifyVarMonad liftF defaultModifyVarMonad
 
 stdSpecK = SpecK stdK stdSpecMonad
 
@@ -177,5 +183,11 @@ runFNCDVarMon = runFNCD {K = stdK}
                   {{keq = stdKEq}}
 -}
 
-runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> T
-runStdForkingVarMonad m r = {! runFNCD (void $ propagate m [])!}
+instance
+  _ = stdSpecModifyVarMonad
+
+runStdForkingVarMonad : stdForkingVarMonadM B -> (Maybe B -> defaultVarMonadStateM A) -> A
+runStdForkingVarMonad m r = runDefVarMonad $ runPropagation >>= r
+  where
+    runPropagation = propagate $ runFNCD {M = stdSpecMonad} (fst <$> propagate m [])
+--{M = stdSpecMonad} {{mvm = stdSpecModifyVarMonad }} {{mf = FMFTMonadFork }}

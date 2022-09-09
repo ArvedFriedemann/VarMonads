@@ -82,8 +82,11 @@ boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
 boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
 
 {-# TERMINATING #-}
-propagate : {{mon : Monad M}} -> FMFT M A -> M (ActList (FMFT M))
-propagate {M = M} m = (snd <$> runFMFT m) >>= propagate'
+propagate : {{mon : Monad M}} -> FMFT M A -> M A
+propagate {M = M} m = do
+    (a , lst) <- runFMFT m
+    propagate' lst
+    return a
   where
     propagate' : ActList (FMFT M) -> M (ActList (FMFT M))
     propagate' [] = return []

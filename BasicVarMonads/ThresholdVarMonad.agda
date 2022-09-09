@@ -202,5 +202,8 @@ module runFreeThresholdVarMonadPropagation
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
     where newprop = runFNCDCont o cont >=> runFNCDtoVarProp
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> M T
-  runFNCD = runFNCDCont >=> runFNCDtoVarProp
+  runFNCD : FNCDVarMon K (TVar K' V) A -> M (Maybe A)
+  runFNCD m = do
+    AorCont <- runFNCDCont m
+    runFNCDtoVarProp AorCont
+    return $ maybeLeft AorCont
