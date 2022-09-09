@@ -11,6 +11,7 @@ open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Lattice
 open import Util.Derivation
 open import Util.PointerEquality
+open import Util.Monad
 open import SpecialVarMonads.BranchingVarMonad
 open import MiscMonads.ConcurrentMonad
 
@@ -114,21 +115,26 @@ readerTVM = liftThresholdVarMonad \m s -> (_, s) <$> m
 
 open ConnectionOperations
 
+stdSpecMonad : Set -> Set
+stdSpecMonad = FMFT defaultVarMonadStateM
+
+stdSpecK = SpecK stdK stdSpecMonad
+
 stdBranchingVarMonadM : Set -> Set
-stdBranchingVarMonadM = (StateT (List (TVar stdK NatPtr T))
-  (FNCDVarMon stdK (TVar stdK NatPtr)))
+stdBranchingVarMonadM = (StateT (List (TVar stdSpecK NatPtr T))
+  (FNCDVarMon stdK (TVar stdSpecK NatPtr)))
 
 stdBranchingVarMonadV : Set -> Set
-stdBranchingVarMonadV = TVar stdK (SVar (TVar stdK NatPtr) T)
+stdBranchingVarMonadV = TVar stdK (SVar (TVar stdSpecK NatPtr) T)
 
 stdBranchingVarMonadS : Set
-stdBranchingVarMonadS = TVar stdK NatPtr T
+stdBranchingVarMonadS = TVar stdSpecK NatPtr T
 
 stdBranchingVarMonad : BranchingVarMonad stdK stdBranchingVarMonadM stdBranchingVarMonadV stdBranchingVarMonadS
-stdBranchingVarMonad = let tvm = readerTVM (FreeThresholdVarMonad {V = NatPtr}) in
+stdBranchingVarMonad = let tvm = readerTVM (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr}) in
         ThresholdVarMonad=>BranchingVarMonad
           {S = T}
-          {{eq = PEqToEq {{PEqTVar {K = stdK} }} }}
+          {{eq = PEqToEq {{ PEqTVar {K = stdSpecK} }} }}
           {{bvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
           {{tvm = tvm }}
 
@@ -163,14 +169,13 @@ stdForkingVarMonad : LiftedStdBranchingVarMonad FMFT
 stdForkingVarMonad = liftBranchingVarMonad liftF stdBranchingVarMonad
 
 open runFreeThresholdVarMonadPropagation
-
+{-}
 runFNCDVarMon : FNCDVarMon stdK (TVar _ NatPtr) A -> FMFT defaultVarMonadStateM T
 runFNCDVarMon = runFNCD {K = stdK}
                   {{mvm = defaultForkModifyVarMonad}}
                   {{mf = FMFTMonadFork}}
                   {{keq = stdKEq}}
-
-{-}
-runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> T
-runStdForkingVarMonad m r =  {! runFNCDVarMon (fst <$> (propagate m >> return nothing) []) !}
 -}
+
+runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> T
+runStdForkingVarMonad m r = {! runFNCD (void $ propagate m [])!}

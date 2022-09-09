@@ -76,11 +76,13 @@ defaultVarMonad = record {
 
 open import BasicVarMonads.Constructions
 
-defaultModifyVarMonad = BaseVarMonad=>ModifyVarMonad {{defaultVarMonad}}
-
 open import MiscMonads.ConcurrentMonad
 open import BasicVarMonads.ModifyVarMonad
 
+defaultModifyVarMonad : ModifyVarMonad defaultVarMonadStateM NatPtr
+defaultModifyVarMonad = BaseVarMonad=>ModifyVarMonad {{defaultVarMonad}}
+
+defaultForkModifyVarMonad : ModifyVarMonad (FMFT defaultVarMonadStateM) NatPtr
 defaultForkModifyVarMonad = liftModifyVarMonad {{mon' = FMFTMonad}} liftF defaultModifyVarMonad
 
 runDefVarMonad : defaultVarMonadStateM A -> A

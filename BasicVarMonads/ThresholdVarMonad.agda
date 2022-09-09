@@ -66,18 +66,17 @@ record ThresholdVarMonad
   field
     cvm : NewConstrDefVarMonad K M V
     tvbf : BijTFunctor V
-    transOf : V A -> TVar K V A
     overlap {{KEq}} : K derives Eq
     overlap {{KBMSL}} : K derives BoundedMeetSemilattice
   open NewConstrDefVarMonad cvm public
   open BijTFunctor tvbf public
 
-  newLike : V A -> M (V A)
-  newLike v = (f <bt$>_) <$> new {A = OrigT} {{k = origK}}
-    where open TVar (transOf v)
-
-  sameOrigT : V A -> V B -> Set
-  sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
+  -- newLike : V A -> M (V A)
+  -- newLike v = (f <bt$>_) <$> new {A = OrigT} {{k = origK}}
+  --   where open TVar (transOf v)
+  --
+  -- sameOrigT : V A -> V B -> Set
+  -- sameOrigT v1 v2 = TVar.OrigT (transOf v1) === TVar.OrigT (transOf v2)
 
 liftThresholdVarMonad : {{mon : Monad M'}} ->
   (forall {A} -> M A -> M' A) ->
@@ -85,16 +84,14 @@ liftThresholdVarMonad : {{mon : Monad M'}} ->
   ThresholdVarMonad K M' V
 liftThresholdVarMonad liftT tvm = record {
     cvm = liftNewConstrDefVarMonad liftT cvm ;
-    tvbf = tvbf ;
-    transOf = transOf }
+    tvbf = tvbf }
   where open ThresholdVarMonad tvm
 
 FreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
   ThresholdVarMonad K (FNCDVarMon K (TVar K V)) (TVar K V)
 FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
-  tvbf = TVarBijTFunctor ;
-  transOf = stdTransOf }
+  tvbf = TVarBijTFunctor }
 
 module _ {{tvm : ThresholdVarMonad K M V}}
           {{cvm : ConstrDefVarMonad K M V'}} where
@@ -116,8 +113,7 @@ module _ {{tvm : ThresholdVarMonad K M V}}
         new = TVarC _ (just <,> id) <$> newC ;
         read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
-      tvbf = TVarBijTFunctor ;
-      transOf = stdTransOf }
+      tvbf = TVarBijTFunctor }
 
 FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
 FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)
@@ -143,6 +139,15 @@ module _ where
 PropPtrCont : (Set -> Set) -> Set -> Set
 PropPtrCont M A =  A -x- List (Sigma Set \B -> (A -> Maybe B) -x- (B -> M T))
 
+SpecK : (Set -> Set) -> (Set -> Set) -> Set -> Set
+SpecK K M B = Sigma Set \A -> (B === PropPtrCont M A) -x- K A
+
+SpecialFreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
+  ThresholdVarMonad K (FNCDVarMon K (TVar (SpecK K M) V)) (TVar (SpecK K M) V)
+SpecialFreeThresholdVarMonad = record {
+  cvm = FNCDVarMonNewConstrDefVarMonad ;
+  tvbf = TVarBijTFunctor}
+
 open import BasicVarMonads.ModifyVarMonad
 open import MiscMonads.ConcurrentMonad
 open import Util.Monad
@@ -157,7 +162,7 @@ module runFreeThresholdVarMonadPropagation
   open ModifyVarMonad mvm
 
   K' : Set -> Set
-  K' B = Sigma Set \A -> (B === PropPtrCont M A) -x- K A
+  K' = SpecK K M
 
   private
     propagatorModify : {{k : K A}} -> A -> PropPtrCont M A ->
