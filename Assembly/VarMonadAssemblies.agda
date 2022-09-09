@@ -113,7 +113,17 @@ readerTVM = liftThresholdVarMonad \m s -> (_, s) <$> m
 
 open ConnectionOperations
 
---stdBranchingVarMonad : BranchingVarMonad K (StateT (List _) (FNCDVarMon K _) ) _
+stdBranchingVarMonadM : Set -> Set
+stdBranchingVarMonadM = (StateT (List (TVar stdK NatPtr T))
+  (FNCDVarMon stdK (TVar stdK NatPtr)))
+
+stdBranchingVarMonadV : Set -> Set
+stdBranchingVarMonadV = TVar stdK (SVar (TVar stdK NatPtr) T)
+
+stdBranchingVarMonadS : Set
+stdBranchingVarMonadS = TVar stdK NatPtr T
+
+stdBranchingVarMonad : BranchingVarMonad stdK stdBranchingVarMonadM stdBranchingVarMonadV stdBranchingVarMonadS
 stdBranchingVarMonad = let tvm = readerTVM (FreeThresholdVarMonad {V = NatPtr}) in
         ThresholdVarMonad=>BranchingVarMonad
           {S = T}
@@ -139,4 +149,23 @@ instance
       local' f (returnF x) = returnF x
       local' f (bindF m mf) = bindF (local' f m) (local' f o mf)
 
+LiftedStdBranchingVarMonad : ((Set -> Set) -> Set -> Set) -> Set
+LiftedStdBranchingVarMonad L = BranchingVarMonad stdK
+                                  (L stdBranchingVarMonadM)
+                                  stdBranchingVarMonadV
+                                  stdBranchingVarMonadS
+
+runStdBranchingVarMonad : stdBranchingVarMonadM A -> A
+runStdBranchingVarMonad m = {!!}
+
+stdForkingVarMonadM : Set -> Set
+stdForkingVarMonadM = FMFT stdBranchingVarMonadM
+
+stdForkingVarMonad : LiftedStdBranchingVarMonad FMFT
 stdForkingVarMonad = liftBranchingVarMonad liftF stdBranchingVarMonad
+
+runFNCDVarMon : FNCDVarMon K (TVar K V) A -> Maybe A
+runFNCDVarMon = {!!}
+
+runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> Maybe (Maybe A)
+runStdForkingVarMonad m r = runFNCDVarMon $ fst <$> (propagate m >> return nothing) []

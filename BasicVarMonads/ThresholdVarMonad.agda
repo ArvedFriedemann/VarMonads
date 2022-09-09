@@ -118,3 +118,24 @@ module _ {{tvm : ThresholdVarMonad K M V}}
         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
       tvbf = TVarBijTFunctor ;
       transOf = stdTransOf }
+
+FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
+FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)
+
+module _ where
+  open ConstrDefVarMonad {{...}}
+
+  runFreeThresholdVarMonad :
+    {{cvm : ConstrDefVarMonad K M V}} ->
+    FNCDVarMon K (TVar K V) A -> M (A or (FNCDCont K (TVar K V) A))
+  runFreeThresholdVarMonad newF = (left o (TVarC _ (just <,> id))) <$> new
+  runFreeThresholdVarMonad (readF (TVarC OrigT (to <,> from) OVar)) =
+    (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
+    <$> read OVar
+  runFreeThresholdVarMonad (writeF (TVarC OrigT (to <,> from) OVar) x) =
+    left <$> write OVar (from x)
+  runFreeThresholdVarMonad (returnF x) = left <$> return x
+  runFreeThresholdVarMonad (bindF m f) = runFreeThresholdVarMonad m >>= \{
+      (left x) -> runFreeThresholdVarMonad (f x) ;
+      (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
+    }
