@@ -148,13 +148,13 @@ open import MiscMonads.ConcurrentMonad
 open import Util.Monad
 
 module runFreeThresholdVarMonadPropagation
-  {{cvm : ModifyVarMonad M V}}
+  {{mvm : ModifyVarMonad M V}}
   {{mf : MonadFork M}}
   {{keq : K derives Eq}}
   {{kbmsl : K derives BoundedMeetSemilattice}} where
   open BoundedMeetSemilattice {{...}}
   open MonadFork mf
-  open ModifyVarMonad cvm
+  open ModifyVarMonad mvm
 
   K' : Set -> Set
   K' B = Sigma Set \A -> (B === PropPtrCont M A) -x- K A
@@ -176,16 +176,16 @@ module runFreeThresholdVarMonadPropagation
     propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
       modify v (propagatorModify {{k = k}} (fst $ from x)) >>= runPropagators
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
+  runFNCDCont : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
   --notice how we write an empty propagator list back. This is not a problem because we ignore that during the write!
-  runFNCD newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
-  runFNCD (readF (TVarC OrigT (to <,> from) OVar)) =
+  runFNCDCont newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
+  runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
     (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
     <$> read OVar
-  runFNCD (writeF v x) = left <$> propagatorWrite v x
-  runFNCD (returnF x) = left <$> return x
-  runFNCD (bindF m f) = runFNCD m >>= \{
-      (left x) -> runFNCD (f x) ;
+  runFNCDCont (writeF v x) = left <$> propagatorWrite v x
+  runFNCDCont (returnF x) = left <$> return x
+  runFNCDCont (bindF m f) = runFNCDCont m >>= \{
+      (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
@@ -195,4 +195,7 @@ module runFreeThresholdVarMonadPropagation
   runFNCDtoVarProp (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
-    where newprop = runFNCD o cont >=> runFNCDtoVarProp
+    where newprop = runFNCDCont o cont >=> runFNCDtoVarProp
+
+  runFNCD : FNCDVarMon K (TVar K' V) A -> M T
+  runFNCD = runFNCDCont >=> runFNCDtoVarProp

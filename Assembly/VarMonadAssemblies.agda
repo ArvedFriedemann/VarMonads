@@ -92,6 +92,7 @@ instance
   _ = PEqNatPtr
   _ = MonadStateT
   _ = MonadReaderStateT
+  _ = MonadStateTId
   _ = MonadFNCDVarMon
   _ = PlainMonadSTM
   _ = ISTOTVar
@@ -155,17 +156,21 @@ LiftedStdBranchingVarMonad L = BranchingVarMonad stdK
                                   stdBranchingVarMonadV
                                   stdBranchingVarMonadS
 
-runStdBranchingVarMonad : stdBranchingVarMonadM A -> A
-runStdBranchingVarMonad m = {!!}
-
 stdForkingVarMonadM : Set -> Set
 stdForkingVarMonadM = FMFT stdBranchingVarMonadM
 
 stdForkingVarMonad : LiftedStdBranchingVarMonad FMFT
 stdForkingVarMonad = liftBranchingVarMonad liftF stdBranchingVarMonad
 
-runFNCDVarMon : FNCDVarMon K (TVar K V) A -> Maybe A
-runFNCDVarMon = {!!}
+open runFreeThresholdVarMonadPropagation
 
-runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> Maybe (Maybe A)
-runStdForkingVarMonad m r = runFNCDVarMon $ fst <$> (propagate m >> return nothing) []
+runFNCDVarMon : FNCDVarMon stdK (TVar _ NatPtr) A -> FMFT defaultVarMonadStateM T
+runFNCDVarMon = runFNCD {K = stdK}
+                  {{mvm = defaultForkModifyVarMonad}}
+                  {{mf = FMFTMonadFork}}
+                  {{keq = stdKEq}}
+
+{-}
+runStdForkingVarMonad : stdForkingVarMonadM B -> stdBranchingVarMonadM A -> T
+runStdForkingVarMonad m r =  {! runFNCDVarMon (fst <$> (propagate m >> return nothing) []) !}
+-}

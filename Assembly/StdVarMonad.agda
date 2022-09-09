@@ -74,5 +74,14 @@ defaultVarMonad = record {
     write = \ {A} p v (n , mp) -> tt , n , (insert (idx p) (A , v) mp)
   }
 
+open import BasicVarMonads.Constructions
+
+defaultModifyVarMonad = BaseVarMonad=>ModifyVarMonad {{defaultVarMonad}}
+
+open import MiscMonads.ConcurrentMonad
+open import BasicVarMonads.ModifyVarMonad
+
+defaultForkModifyVarMonad = liftModifyVarMonad {{mon' = FMFTMonad}} liftF defaultModifyVarMonad
+
 runDefVarMonad : defaultVarMonadStateM A -> A
 runDefVarMonad m = fst $ m defaultInit

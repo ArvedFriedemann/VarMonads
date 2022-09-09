@@ -6,7 +6,7 @@ open import AgdaAsciiPrelude.AsciiPrelude
 private
   variable
     A B : Set
-    M V K : Set -> Set
+    M M' V K : Set -> Set
 
 record ModifyVarMonad
     (M : Set -> Set)
@@ -24,6 +24,16 @@ record ModifyVarMonad
 
   write : V A -> A -> M T
   write v a = write' v (const a)
+
+liftModifyVarMonad :
+  {{mon' : Monad M'}} ->
+  (forall {A} -> M A -> M' A) ->
+  ModifyVarMonad M V ->
+  ModifyVarMonad M' V
+liftModifyVarMonad liftT mvm = record {
+    new = liftT o new ;
+    modify = \v f -> liftT (modify v f) }
+  where open ModifyVarMonad mvm
 
 record ConstrDefModifyVarMonad
     (K : Set -> Set)

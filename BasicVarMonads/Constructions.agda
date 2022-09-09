@@ -34,6 +34,18 @@ module BaseVarMonadConstructions where
     new = new ;
     read = read ;
     write = write }
+
+  open import BasicVarMonads.ModifyVarMonad
+
+  BaseVarMonad=>ModifyVarMonad : {{bvm : BaseVarMonad M V}} -> ModifyVarMonad M V
+  BaseVarMonad=>ModifyVarMonad = record {
+    new = new ;
+    modify = \v f -> do
+      x <- read v
+      write v (fst (f x))
+      return (snd (f x))
+    }
+
 open BaseVarMonadConstructions public
 
 module LatticeVarMonadConstructions where
