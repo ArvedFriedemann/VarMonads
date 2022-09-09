@@ -8,6 +8,23 @@ private
     A B : Set
     M V K : Set -> Set
 
+record ModifyVarMonad
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
+  field
+    new : A -> M (V A)
+    modify : V A -> (A -> A -x- B) -> M B
+    overlap {{mon}} : Monad M
+
+  read : V A -> M A
+  read v = modify v \x -> (x , x)
+
+  write' : V A -> (A -> A) -> M T
+  write' v f = modify v \x -> (f x , tt)
+
+  write : V A -> A -> M T
+  write v a = write' v (const a)
+
 record ConstrDefModifyVarMonad
     (K : Set -> Set)
     (M : Set -> Set)

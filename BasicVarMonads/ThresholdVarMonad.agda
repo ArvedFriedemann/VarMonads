@@ -139,3 +139,60 @@ module _ where
       (left x) -> runFreeThresholdVarMonad (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
+
+PropPtrCont : (Set -> Set) -> Set -> Set
+PropPtrCont M A =  A -x- List (Sigma Set \B -> (A -> Maybe B) -x- (B -> M T))
+
+open import BasicVarMonads.ModifyVarMonad
+open import MiscMonads.ConcurrentMonad
+open import Util.Monad
+
+module runFreeThresholdVarMonadPropagation
+  {{cvm : ModifyVarMonad M V}}
+  {{mf : MonadFork M}}
+  {{keq : K derives Eq}}
+  {{kbmsl : K derives BoundedMeetSemilattice}} where
+  open BoundedMeetSemilattice {{...}}
+  open MonadFork mf
+  open ModifyVarMonad cvm
+
+  K' : Set -> Set
+  K' B = Sigma Set \A -> (B === PropPtrCont M A) -x- K A
+
+  private
+    propagatorModify : {{k : K A}} -> A -> PropPtrCont M A ->
+      PropPtrCont M A -x- List (M T)
+    propagatorModify x (x' , props) with
+      xm <- x /\ x' | partitionSumsWith (\{(B , to , cont) ->
+                        maybe' (left o cont)
+                               (right (B , to , cont))
+                               (to xm)}) props
+    ... | (succd , failed) = (xm , failed) , succd
+
+    runPropagators : List (M T) -> M T
+    runPropagators = void o sequenceM o map fork
+
+    propagatorWrite : TVar K' V A -> A -> M T
+    propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
+      modify v (propagatorModify {{k = k}} (fst $ from x)) >>= runPropagators
+
+  runFNCD : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
+  --notice how we write an empty propagator list back. This is not a problem because we ignore that during the write!
+  runFNCD newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
+  runFNCD (readF (TVarC OrigT (to <,> from) OVar)) =
+    (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
+    <$> read OVar
+  runFNCD (writeF v x) = left <$> propagatorWrite v x
+  runFNCD (returnF x) = left <$> return x
+  runFNCD (bindF m f) = runFNCD m >>= \{
+      (left x) -> runFNCD (f x) ;
+      (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
+    }
+
+  {-# TERMINATING #-}
+  runFNCDtoVarProp : A or (FNCDCont K (TVar K' V) A) -> M T
+  runFNCDtoVarProp (left x) = return tt
+  runFNCDtoVarProp (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+    modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
+      (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
+    where newprop = runFNCD o cont >=> runFNCDtoVarProp
