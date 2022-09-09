@@ -195,12 +195,10 @@ module ConnectionOperations
     write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
                     atomically (modifyAtom' v (map1 (const x) )) } }
 
-  instance
-    _ = CDVM
-
   ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)
   ThresholdVarMonad=>BranchingVarMonad = record {
     tvm = ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
+            {{cvm = CDVM}}
             SVar.var
             SVarBijTFunc ;
     branchedLift = \liftT m -> liftT new >>= \vs -> local (vs ::_) (m (local $ drop 1))  }--new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }
