@@ -26,6 +26,15 @@ instance
     sl = record { _<>_ = max } ;
     neut = 0 } }
 
+testWrite : Maybe Nat
+testWrite = flip runStdForkingVarMonad read do
+  v <- new
+  write v 10
+  return v
+
+testWriteResult : testWrite === just 10
+testWriteResult = refl
+
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
   v <- new
@@ -35,12 +44,18 @@ testFork = flip runStdForkingVarMonad read do
   write v 10
   return v
 
+testForkResult : testFork === just 20
+testForkResult = refl
+
 testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
-  write v 10
-  branched \push -> do
+  branched \push -> fork $ do
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     write v 20
     push (write v 15)
+  write v 10
   return v
+
+testBranchResult : testBranch === just 15
+testBranchResult = refl
