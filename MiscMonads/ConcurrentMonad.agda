@@ -68,7 +68,7 @@ FMFTMonad = record {
 
 runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
 runFMFT (liftF m) = (_, []) <$> m
-runFMFT (forkF m) = return (tt , [])
+runFMFT (forkF m) = return ( tt , [ void {{mon = FMFTMonad}} $ m ])
 runFMFT (returnF x) = return (x , [])
 runFMFT (bindF m f) = do
   (a , lst) <- runFMFT m
