@@ -36,6 +36,9 @@ SVarPType V S A = A -x- Map (V S) (SVar V S A) -x- Maybe (SVar V S A)
 onSVarV : {{sto : ISTO (V S)}} -> (V (SVarPType V S A) -> B) -> SVar V S A -> B
 onSVarV f (SVarC _ v) = f v
 
+mapVarSVar : {{sto : ISTO (V S)}} -> (V (SVarPType V S A) -> V (SVarPType V S B)) -> SVar V S A -> SVar V S B
+mapVarSVar f (SVarC p v) = SVarC p (f v)
+
 open import Util.PointerEquality
 
 ISTOSVar :
@@ -45,8 +48,20 @@ ISTOSVar = ExtractISTOFrom \{(SVarC _ v) -> _ , v}
 
 open import BasicVarMonads.ThresholdVarMonad
 
-SVarBijTFunc : {{sto : ISTO (V S)}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) B
-SVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty , nothing
+halfSVarBijTFunc : {{sto : ISTO (V S)}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) B
+halfSVarBijTFunc (to <,> from) = (to o fst) <,> \b -> from b , empty , nothing
+
+-- This doesn't work for so many reasons...the maps would need to adjust their type recursively,
+-- there would need to be a reverse operation etc...
+-- {-# TERMINATING #-}
+-- SVarBijTFunc : {{sto : ISTO (V S)}} -> {{bf : BijTFunctor V}} -> BijTFunc A B -> BijTFunc (SVarPType V S A) (SVarPType V S B)
+-- SVarBijTFunc (to <,> from) = (\{(x , mp , p) -> (_, mapMap recVTrans mp , (recVTrans <$> p)) <$> to x})
+--                               <,> (\{(x , mp , p) -> (from x , {!   !} , {!!}) })
+--     where
+--       open BijTFunctor {{...}}
+--       recVTrans = mapVarSVar (SVarBijTFunc (to <,> from) <bt$>_)
+--       recBackTrans = mapVarSVar (SVarBijTFunc (to <,> from) <bt$>_)--this one doesnt even work...
+
 
 record BranchingVarMonad
     (K : Set -> Set)
@@ -195,10 +210,17 @@ module ConnectionOperations
     write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
                     atomically (modifyAtom' v (map1 (const x) )) } }
 
+  --we have to go the long way with new TVars here because SVars do not have a BijTFunctor instance, even when their original variable has one...
   ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)
   ThresholdVarMonad=>BranchingVarMonad = record {
-    tvm = ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
-            {{cvm = CDVM}}
-            SVar.var
-            SVarBijTFunc ;
+    tvm = record {
+      cvm = record {
+        new = (TVarC _ (just <,> id)) <$> (ask >>= newSVar') ;
+        read = \{(TVarC OrigT f v) ->
+          getLocalVar v >>= read o
+            onSVarV (halfSVarBijTFunc f <bt$>_) } ;
+        write = \{(TVarC OrigT f v) x -> 
+          getLocalVar v >>= flip write x o
+            onSVarV (halfSVarBijTFunc f <bt$>_)} } ;
+      tvbf = TVarBijTFunctor } ;
     branchedLift = \liftT m -> liftT new >>= \vs -> local (vs ::_) (m (local $ drop 1))  }--new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }

@@ -93,27 +93,28 @@ FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
 
-module _ {{tvm : ThresholdVarMonad K M V}}
-          {{cvm : ConstrDefVarMonad K M V'}} where
-
-  open ThresholdVarMonad tvm renaming (new to newT; read to readT; write to writeT; cvm to cvmT)
-  open ConstrDefVarMonad cvm renaming (new to newC; read to readC; write to writeC)
-
-  private
-    variable
-      PContT : Set -> Set
-
-  ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad :
-    (forall {A} -> (V' A) -> V (PContT A)) ->
-    (forall {A B} -> BijTFunc A B -> BijTFunc (PContT A) B) ->
-    ThresholdVarMonad K M (TVar K V')
-  ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
-    retrieve bijTtrans = record {
-      cvm = record {
-        new = TVarC _ (just <,> id) <$> newC ;
-        read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
-        write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
-      tvbf = TVarBijTFunctor }
+-- module _ {{tvm : ThresholdVarMonad K M V}}
+--           {{cvm : ConstrDefVarMonad K M V'}} where
+--
+--   open ThresholdVarMonad tvm renaming (new to newT; read to readT; write to writeT; cvm to cvmT)
+--   open ConstrDefVarMonad cvm renaming (new to newC; read to readC; write to writeC)
+--
+--   private
+--     variable
+--       PContT : Set -> Set
+--
+--   --TODO : This constructions makes no sense, as it does not use the unterlying ConstrDefVarMonad!
+--   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad :
+--     (forall {A} -> (V' A) -> V (PContT A)) ->
+--     (forall {A B} -> BijTFunc A B -> BijTFunc (PContT A) B) ->
+--     ThresholdVarMonad K M (TVar K V')
+--   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
+--     retrieve bijTtrans = record {
+--       cvm = record {
+--         new = TVarC _ (just <,> id) <$> newC ;
+--         read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
+--         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
+--       tvbf = TVarBijTFunctor }
 
 FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
 FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)

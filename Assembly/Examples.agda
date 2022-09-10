@@ -16,6 +16,8 @@ private
 
 open BranchingVarMonad stdForkingVarMonad
 open MonadFork (FMFTMonadFork {{BranchingVarMonad.mon stdBranchingVarMonad}}) hiding (mon)
+open MonadReader _ (BranchingVarMonad.mr stdBranchingVarMonad) using (reader; local)
+
 
 instance
   _ = mon
@@ -51,11 +53,13 @@ testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
   branched \push -> fork $ do
+    l <- liftF $ reader length
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+    --write v (l + 100)
     write v 20
     push (write v 15)
   write v 10
   return v
 
-testBranchResult : testBranch === just 15
-testBranchResult = refl
+-- testBranchResult : testBranch === just 15
+-- testBranchResult = refl
