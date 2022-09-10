@@ -6,7 +6,9 @@ open import AgdaAsciiPrelude.AsciiPrelude
 
 private
   variable
-    A B : Set
+    A B S : Set
+    M : Set -> Set
+    MT : (Set -> Set) -> Set -> Set
 
 module _ {M : Set -> Set} {{mon : Monad M}} where
 
@@ -28,9 +30,21 @@ module _ {M : Set -> Set} {{mon : Monad M}} where
       loop' [] f b0 = return b0
       loop' (x :: lst) f b0 = f x b0 >>= loop' lst f
 
--- open import AgdaAsciiPrelude.Instances
--- instance
---   _ = MonadMaybe
---
--- test : Maybe Nat
--- test = loop (1 :: 2 :: 3 :: []) 0 \ a b -> just (a + b)
+record MonadTrans (MT : (Set -> Set) -> Set -> Set) : Set where
+  field
+    liftT : {{mon : Monad M}} -> M A -> MT M A
+
+stateTMonadTrans : MonadTrans (StateT S)
+stateTMonadTrans = record { liftT = \m s -> (_, s) <$> m }
+
+open MonadTrans {{...}}
+open MonadState {{...}} hiding (_<$>_; _>>_; _>>=_; return)
+
+MonadReaderFromState :
+  {{mon : Monad M}}
+  {{mt : MonadState S M}} ->
+  MonadReader S M
+MonadReaderFromState = record {
+  monad = it ;
+  reader = _<$> get ;
+  local = \f m -> get >>= \s -> put (f s) >> m >>= \r -> put s >> return r }
