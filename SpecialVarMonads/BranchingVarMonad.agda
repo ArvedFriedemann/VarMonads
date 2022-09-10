@@ -5,6 +5,7 @@ module SpecialVarMonads.BranchingVarMonad where
 open import AgdaAsciiPrelude.AsciiPrelude
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Monad
+open import Debug.Trace
 
 private
   variable
@@ -180,12 +181,12 @@ module ConnectionOperations
   getChild vs (SVarC lst v) = do
     (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
     when c? (v =p> vc)
-    return (SVarC lstpar vc)
+    return $ trace "retrieved child" (SVarC lstpar vc)
 
 
   getLocalVar : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getLocalVar (SVarC origin v) = do
-    target <- ask
+    target <- trace "getting local var" ask
     let (ancToTarget , ancToOrigin) =
           if headEq {{eq = eq}} target origin
           then ([] , [])
@@ -219,7 +220,7 @@ module ConnectionOperations
         read = \{(TVarC OrigT f v) ->
           getLocalVar v >>= read o
             onSVarV (halfSVarBijTFunc f <bt$>_) } ;
-        write = \{(TVarC OrigT f v) x -> 
+        write = \{(TVarC OrigT f v) x ->
           getLocalVar v >>= flip write x o
             onSVarV (halfSVarBijTFunc f <bt$>_)} } ;
       tvbf = TVarBijTFunctor } ;

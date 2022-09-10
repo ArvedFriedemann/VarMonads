@@ -53,7 +53,6 @@ defaultInit : defaultState
 defaultInit = (0 , empty)
 
 open import AgdaAsciiPrelude.TrustMe
-postulate dummy : {A : Set} -> A
 
 safeLookup : NatPtr A -> Map Nat (Sigma Set id) -> A
 safeLookup (ptr p) mp with lookup p mp

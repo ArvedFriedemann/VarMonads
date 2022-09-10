@@ -34,8 +34,8 @@ testWrite = flip runStdForkingVarMonad read do
   write v 10
   return v
 
-testWriteResult : testWrite === just 10
-testWriteResult = refl
+-- testWriteResult : testWrite === just 10
+-- testWriteResult = refl
 
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
@@ -46,19 +46,21 @@ testFork = flip runStdForkingVarMonad read do
   write v 10
   return v
 
-testForkResult : testFork === just 20
-testForkResult = refl
+-- testForkResult : testFork === just 20
+-- testForkResult = refl
+
+open import Debug.Trace
 
 testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
-  branched \push -> fork $ do
-    l <- liftF $ reader length
-    read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
-    --write v (l + 100)
-    write v 20
-    push (write v 15)
-  write v 10
+  write v (trace "writing something" 10)
+  branched \push -> do
+    write v 10
+    -- l <- liftF $ reader length
+    -- read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+    -- write v (l + 100)
+    -- push (write v 15)
   return v
 
 -- testBranchResult : testBranch === just 15
