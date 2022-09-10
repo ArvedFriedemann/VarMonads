@@ -18,6 +18,9 @@ open BranchingVarMonad stdBranchingVarMonad
 open MonadReader _ (BranchingVarMonad.mr stdBranchingVarMonad) using (reader; local)
 open MonadFork stdMonadFork hiding (mon)
 
+open import SpecialVarMonads.Propagators.BasicPropagators
+open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
+
 instance
   _ = mon
 
@@ -33,8 +36,8 @@ testWrite = flip runStdForkingVarMonad read do
   write v 10
   return v
 
--- testWriteResult : testWrite === just 10
--- testWriteResult = refl
+testWriteResult : testWrite === just 10
+testWriteResult = refl
 
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
@@ -45,19 +48,30 @@ testFork = flip runStdForkingVarMonad read do
   write v 10
   return v
 
--- testForkResult : testFork === just 20
--- testForkResult = refl
+testForkResult : testFork === just 20
+testForkResult = refl
+
+testEqProp : Maybe Nat
+testEqProp = flip runStdForkingVarMonad read do
+  v <- new
+  v' <- new
+  --fork $ v' =p> v
+  fork $ read ((eqThreshold 0) <bt$> v') >>= write v   -- >> read ((eqThreshold 10) <bt$> v')
+  --write v' 10
+  return v
+
+testEqPropResult : testEqProp === just 10
+testEqPropResult = refl
 
 testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
-  --write v 10
-  branched \push -> do
-    write v 20
-    -- l <- liftF $ reader length
-    -- read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+  write v 10
+  branched \push -> fork $ do
+    -- l <- reader length
     -- write v (l + 100)
-    -- push (write v 15)
+    read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+    push (write v 15)
   return v
 
 -- testBranchResult : testBranch === just 15

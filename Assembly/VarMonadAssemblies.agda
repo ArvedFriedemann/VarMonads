@@ -168,7 +168,7 @@ stdBranchingVarMonad = let
           {{tvm = tvm }}
 
 stdMonadFork : MonadFork stdBranchingVarMonadM
-stdMonadFork = it
+stdMonadFork =
 
 open runFreeThresholdVarMonadPropagation
 
@@ -180,3 +180,16 @@ runStdForkingVarMonad m r = runDefVarMonad $
                               propagate $
                               runFNCD {M = stdSpecMonad}
                                 (fst <$> (propagate m >>= propagate o r) [])
+
+{-NOTES on problems:
+
+this does not work as the propagation from the forking monad just puts the actions after each other.
+When doing that with the continuation monad, that does not work because it might get stuck in a fork,
+but then delays all subsequent computation as well, even though that should be independent...
+
+runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
+runStdForkingVarMonad m r = runDefVarMonad $
+                              propagate $
+                              runFNCD {M = stdSpecMonad}
+                                (fst <$> (propagate m >>= propagate o r) [])
+-}

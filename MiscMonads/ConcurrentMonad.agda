@@ -87,7 +87,7 @@ runFMFT (bindF m f) = do
   return (b , lst ++ lst')
 
 flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
-flush lst = concat <$> (sequenceM (map ((snd <$>_) o runFMFT) lst) )
+flush lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
 
 boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
 boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
@@ -102,6 +102,15 @@ propagate {M = M} m = do
     propagate' : ActList (FMFT M) -> M (ActList (FMFT M))
     propagate' [] = return []
     propagate' m  = flush m >>= propagate'
+
+flushLift : {{mon : Monad M'}} ->
+  (forall {A B} -> M A -> M' B) ->
+  ActList (FMFT M) ->
+  M' (ActList (FMFT M))
+  -- TODO : Problem is that we need to get the list of next actions somehow...in a guaranteed fashion...
+  -- SOLUTION : lift this whole thing into a state transformer.
+  -- Run the original and prolly not get a value, but make it still gather the forks somehow...
+flushLift liftT lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
 
 FMFTMonadRun : MonadRun FMFT
 FMFTMonadRun = record { run = propagate }
