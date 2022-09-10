@@ -129,10 +129,12 @@ module ConnectionOperations
   {{kvs : K derives (K o SVarPType V S) }}
   {{bvm : ConstrDefVarMonad K M' V}}
   {{stm : MonadSTM M' M}}
+  {{mf : MonadFork M}}
   {{tvm : ThresholdVarMonad K M V}}
   {{mr : MonadReader (List (V S)) M}} where
 
   open MonadReader {{...}} using (reader; local)
+  open MonadFork mf
 
   ask : {{mr : MonadReader A M''}} -> M'' A
   ask = reader id
@@ -175,13 +177,13 @@ module ConnectionOperations
   getParent : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getParent (SVarC lst v) = do
     (c? , (SVarC lstpar vpar)) <- getParentAndCreated? (SVarC lst v)
-    when c? (vpar =p> v)
+    when c? (fork $ vpar =p> v)
     return (SVarC lstpar vpar)
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
     (c? , (SVarC lstpar vc)) <- trace "getting child subroutine" $ getChildAndCreated? vs (SVarC lst v)
-    when c? (v =p> vc) --TODO! This needs to be forked!
+    when c? (fork $ v =p> vc) --TODO! This needs to be forked!
     return $ trace "retrieved child" (SVarC lstpar vc)
 
 
