@@ -107,6 +107,7 @@ connectingPath xs ys = afterInitEqSegment (reverse xs) (reverse ys)
 
 headEq : {{eq : Eq A}} -> List A -> List A -> Bool
 headEq (x :: _) (y :: _) = x == y
+headEq [] [] = true
 headEq _ _ = false
 
 {-}
@@ -179,24 +180,24 @@ module ConnectionOperations
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
-    (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
-    when c? (v =p> vc)
+    (c? , (SVarC lstpar vc)) <- trace "getting child subroutine" $ getChildAndCreated? vs (SVarC lst v)
+    when c? (v =p> vc) --TODO! This needs to be forked!
     return $ trace "retrieved child" (SVarC lstpar vc)
 
 
   getLocalVar : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getLocalVar (SVarC origin v) = do
-    target <- trace "getting local var" ask
+    target <- ask
     let (ancToTarget , ancToOrigin) =
           if headEq {{eq = eq}} target origin
           then ([] , [])
-          else connectingPath {{eq = eq}} target origin
-    par <- loop {M = M} ancToOrigin
+          else (trace ("originLength : " ++s (showN $ length origin) ++s " targetLength : " ++s (showN $ length target)) $ connectingPath {{eq = eq}} target origin)
+    par <- loop {M = M} (trace ("ancToOriginlength : " ++s showN (length ancToOrigin)) ancToOrigin)
                 (SVarC origin v)
                 (const getParent)
-    res <- loop {M = M} ancToTarget
+    res <- loop {M = M} (trace ("ancToTargetlength : " ++s showN (length ancToTarget)) ancToTarget)
                 par
-                getChild
+                (\vs v -> trace "trying to get child" $ getChild vs v)
     return res
 
   newSVar' : {{k : K A}} -> List (V S) -> M (SVar V S A)

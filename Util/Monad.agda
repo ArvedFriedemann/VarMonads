@@ -27,3 +27,10 @@ module _ {M : Set -> Set} {{mon : Monad M}} where
       loop' : List A -> (A -> B -> M B) -> B -> M B
       loop' [] f b0 = return b0
       loop' (x :: lst) f b0 = f x b0 >>= loop' lst f
+
+-- open import AgdaAsciiPrelude.Instances
+-- instance
+--   _ = MonadMaybe
+--
+-- test : Maybe Nat
+-- test = loop (1 :: 2 :: 3 :: []) 0 \ a b -> just (a + b)
