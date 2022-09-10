@@ -1,7 +1,7 @@
 {-# OPTIONS --type-in-type #-}
 module Assembly.Examples where
 
-open import AgdaAsciiPrelude.AsciiPrelude
+open import AgdaAsciiPrelude.AsciiPrelude --hiding (return; _>>_; _>>=_)
 open import AgdaAsciiPrelude.Instances
 open import Assembly.VarMonadAssemblies
 open import SpecialVarMonads.BranchingVarMonad
@@ -14,19 +14,18 @@ private
     A B : Set
     K K' : Set -> Set
 
-open BranchingVarMonad stdForkingVarMonad
-open MonadFork (FMFTMonadFork {{BranchingVarMonad.mon stdBranchingVarMonad}}) hiding (mon)
+open BranchingVarMonad stdBranchingVarMonad
 open MonadReader _ (BranchingVarMonad.mr stdBranchingVarMonad) using (reader; local)
-
+open MonadFork stdMonadFork hiding (mon)
 
 instance
   _ = mon
-  _ = FMFTMonadFork
 
   stdKNat : stdK Nat
   stdKNat = eqNat , record { bsl = record {
     sl = record { _<>_ = max } ;
     neut = 0 } }
+
 
 testWrite : Maybe Nat
 testWrite = flip runStdForkingVarMonad read do

@@ -93,6 +93,13 @@ FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
 
+ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
+ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
+    new = new ;
+    read = read ;
+    write = write }
+  where open ThresholdVarMonad tvm
+
 -- module _ {{tvm : ThresholdVarMonad K M V}}
 --           {{cvm : ConstrDefVarMonad K M V'}} where
 --

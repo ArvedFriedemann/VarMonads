@@ -11,6 +11,7 @@ private
   variable
     A B S : Set
     M M' : Set -> Set
+    MT : (Set -> Set) -> Set -> Set
     S' : (Set -> Set) -> Set
 
 record MonadFork (M : Set -> Set) : Set where
@@ -61,10 +62,20 @@ FMFTMonadFork = record {
     mon = record { return = returnF ; _>>=_ = bindF }
   }
 
+open MonadTrans {{...}}
+open MonadRun {{...}}
+open MonadFork {{...}}
+
+FMFTMonadForkFromRun : {{mon : Monad (MT M)}} {{mt : MonadRun MT}} {{mf : MonadFork M}} -> MonadFork (MT M)
+FMFTMonadForkFromRun = record { fork = liftT o fork o run }
+
 FMFTMonad : Monad (FMFT M)
 FMFTMonad = record {
   return = returnF ;
   _>>=_ = bindF }
+
+FMFTMonadTrans : MonadTrans FMFT
+FMFTMonadTrans = record { liftT = liftF }
 
 runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
 runFMFT (liftF m) = (_, []) <$> m
@@ -91,6 +102,13 @@ propagate {M = M} m = do
     propagate' : ActList (FMFT M) -> M (ActList (FMFT M))
     propagate' [] = return []
     propagate' m  = flush m >>= propagate'
+
+FMFTMonadRun : MonadRun FMFT
+FMFTMonadRun = record { run = propagate }
+  where
+    instance
+      _ = FMFTMonad
+      _ = FMFTMonadTrans
 
 {-}
 

@@ -34,10 +34,16 @@ record MonadTrans (MT : (Set -> Set) -> Set -> Set) : Set where
   field
     liftT : {{mon : Monad M}} -> M A -> MT M A
 
-stateTMonadTrans : MonadTrans (StateT S)
-stateTMonadTrans = record { liftT = \m s -> (_, s) <$> m }
+record MonadRun (MT : (Set -> Set) -> Set -> Set) : Set where
+  field
+    run : {{mon : Monad M}} -> MT M A -> M A
+    overlap {{mt}} : MonadTrans MT
 
 open MonadTrans {{...}}
+
+MonadTransStateT : MonadTrans (StateT S)
+MonadTransStateT = record { liftT = \m s -> (_, s) <$> m }
+
 open MonadState {{...}} hiding (_<$>_; _>>_; _>>=_; return)
 
 MonadReaderFromState :
@@ -48,3 +54,17 @@ MonadReaderFromState = record {
   monad = it ;
   reader = _<$> get ;
   local = \f m -> get >>= \s -> put (f s) >> m >>= \r -> put s >> return r }
+
+open MonadReader {{...}}
+open MonadRun {{...}}
+
+MonadReaderFromRun :
+  {{mon : Monad M}}
+  {{mont : Monad (MT M)}}
+  {{mred : MonadReader S M}}
+  {{mr : MonadRun MT}} ->
+  MonadReader S (MT M)
+MonadReaderFromRun = record {
+  monad = it ;
+  reader = liftT o reader ;
+  local = \f -> liftT o local f o run }
