@@ -5,7 +5,7 @@ module SpecialVarMonads.BranchingVarMonad where
 open import AgdaAsciiPrelude.AsciiPrelude
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Monad
-open import Debug.Trace
+--open import Debug.Trace
 
 private
   variable
@@ -182,9 +182,9 @@ module ConnectionOperations
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
-    (c? , (SVarC lstpar vc)) <- trace "getting child subroutine" $ getChildAndCreated? vs (SVarC lst v)
-    when c? (fork $ v =p> vc) --TODO! This needs to be forked!
-    return $ trace "retrieved child" (SVarC lstpar vc)
+    (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
+    when c? (fork $ v =p> vc)
+    return (SVarC lstpar vc)
 
 
   getLocalVar : {{k : K A}} -> SVar V S A -> M (SVar V S A)
@@ -193,13 +193,13 @@ module ConnectionOperations
     let (ancToTarget , ancToOrigin) =
           if headEq {{eq = eq}} target origin
           then ([] , [])
-          else (trace ("originLength : " ++s (showN $ length origin) ++s " targetLength : " ++s (showN $ length target)) $ connectingPath {{eq = eq}} target origin)
-    par <- loop {M = M} (trace ("ancToOriginlength : " ++s showN (length ancToOrigin)) ancToOrigin)
+          else connectingPath {{eq = eq}} target origin
+    par <- loop {M = M} ancToOrigin
                 (SVarC origin v)
                 (const getParent)
-    res <- loop {M = M} (trace ("ancToTargetlength : " ++s showN (length ancToTarget)) ancToTarget)
+    res <- loop {M = M} ancToTarget
                 par
-                (\vs v -> trace "trying to get child" $ getChild vs v)
+                getChild
     return res
 
   newSVar' : {{k : K A}} -> List (V S) -> M (SVar V S A)

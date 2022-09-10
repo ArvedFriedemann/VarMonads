@@ -48,14 +48,12 @@ testFork = flip runStdForkingVarMonad read do
 -- testForkResult : testFork === just 20
 -- testForkResult = refl
 
-open import Debug.Trace
-
 testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
-  write v (trace "writing something" 10)
+  --write v 10
   branched \push -> do
-    write v 10
+    write v 20
     -- l <- liftF $ reader length
     -- read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     -- write v (l + 100)

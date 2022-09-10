@@ -6,7 +6,15 @@ open import Assembly.Examples
 
 open import IO
 
+showRes : Maybe Nat -> IO T
+showRes (just x) = putStrLn $ "    Had value " ++s showN x
+showRes nothing = putStrLn "    No value"
+
 main : Main
-main = run $ putStrLn "I'm alive" >> return testBranch >>= \{
-  (just x) -> putStrLn "Had value";
-  nothing -> putStrLn "No value"}
+main = run $ do
+  putStrLn "testWrite"
+  showRes testWrite
+  putStrLn "testFork"
+  showRes testFork
+  putStrLn "testBranch"
+  showRes testBranch
