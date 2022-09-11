@@ -84,7 +84,24 @@ runFMFT (returnF x) = return (x , [])
 runFMFT (bindF m f) = do
   (a , lst) <- runFMFT m
   (b , lst') <- runFMFT (f a)
-  return (b , lst ++ lst')
+  return (b , lst ++ lst') --TODO: inefficient
+
+module _ where
+  -- module monadStateId {S : Set} where
+  --   open Monad (MonadStateTId {S = S}) renaming (return to returnS; _>>_ to _>>S_; _>>=_ to _>>=S_; _<$>_ to _<$>S_) public
+  --   open MonadState (MonadStateStateTId {S = S}) using (get; put) renaming (modify to modifyS) public
+  -- open monadStateId
+  instance
+    _ = FMFTMonad
+
+  runFMFTLift : {{mon' : Monad M'}} ->
+    (forall {A} -> M' A -> M' T) ->
+    (forall {A} -> M A -> M' A) ->
+    FMFT M A -> M' A
+  runFMFTLift runAtom liftT (liftF x) = liftT x
+  runFMFTLift runAtom liftT (forkF m) = runAtom $ runFMFTLift runAtom liftT m
+  runFMFTLift runAtom liftT (returnF x) = return x
+  runFMFTLift runAtom liftT (bindF m f) = runFMFTLift runAtom liftT m >>= runFMFTLift runAtom liftT o f
 
 flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
 flush lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
@@ -103,14 +120,14 @@ propagate {M = M} m = do
     propagate' [] = return []
     propagate' m  = flush m >>= propagate'
 
-flushLift : {{mon : Monad M'}} ->
-  (forall {A B} -> M A -> M' B) ->
-  ActList (FMFT M) ->
-  M' (ActList (FMFT M))
-  -- TODO : Problem is that we need to get the list of next actions somehow...in a guaranteed fashion...
-  -- SOLUTION : lift this whole thing into a state transformer.
-  -- Run the original and prolly not get a value, but make it still gather the forks somehow...
-flushLift liftT lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
+-- flushLift : {{mon : Monad M'}} ->
+--   (forall {A B} -> M A -> M' B) ->
+--   ActList (FMFT M) ->
+--   M' (ActList (FMFT M))
+--   -- TODO : Problem is that we need to get the list of next actions somehow...in a guaranteed fashion...
+--   -- SOLUTION : lift this whole thing into a state transformer.
+--   -- Run the original and prolly not get a value, but make it still gather the forks somehow...
+-- flushLift liftT lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
 
 FMFTMonadRun : MonadRun FMFT
 FMFTMonadRun = record { run = propagate }
