@@ -10,7 +10,7 @@ open import Category.Monad.State renaming (RawMonadState to MonadState)
 private
   variable
     A B S : Set
-    M M' : Set -> Set
+    M M' M'' : Set -> Set
     MT : (Set -> Set) -> Set -> Set
     S' : (Set -> Set) -> Set
 
