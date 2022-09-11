@@ -76,85 +76,48 @@ FMFTMonad = record {
 
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
-
-runFMFT : {{mon : Monad M}} -> FMFT M A -> M (A -x- ActList (FMFT M))
-runFMFT (liftF m) = (_, []) <$> m
-runFMFT (forkF m) = return ( tt , [ void {{mon = FMFTMonad}} $ m ])
-runFMFT (returnF x) = return (x , [])
-runFMFT (bindF m f) = do
-  (a , lst) <- runFMFT m
-  (b , lst') <- runFMFT (f a)
-  return (b , lst ++ lst') --TODO: inefficient
-
-module _ where
-  -- module monadStateId {S : Set} where
-  --   open Monad (MonadStateTId {S = S}) renaming (return to returnS; _>>_ to _>>S_; _>>=_ to _>>=S_; _<$>_ to _<$>S_) public
-  --   open MonadState (MonadStateStateTId {S = S}) using (get; put) renaming (modify to modifyS) public
-  -- open monadStateId
+module _ {{mon : Monad M}} where
+  open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
   instance
-    _ = FMFTMonad
+    _ = MonadStateStateT
+    _ = MonadStateT
+    _ = MonadTransStateT
+
+  ActState = StateT (ActList (FMFT M))
+
+  runFMFT : FMFT M A -> ActState M A
+  runFMFT (liftF m) = liftT m
+  runFMFT (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_)
+  runFMFT (returnF x) = return x
+  runFMFT (bindF m f) = runFMFT m >>= runFMFT o f
+
+  flush : ActState M T
+  flush = get >>= \s -> put [] >> (void $ sequenceM (map runFMFT s))
+
+  -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
+  -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
+
+  {-# TERMINATING #-}
+  propagate : FMFT M A -> M A
+  propagate m = fst <$> (do
+      a <- runFMFT m
+      propagate'
+      return a) []
+    where
+      propagate' : ActState M T
+      propagate' = getS >>= \{
+          [] -> return tt ;
+          _  -> flush >> propagate'
+        }
 
 
-  runFMFTLift' : {{mon : Monad M}} -> {{mon' : Monad M'}} ->
-    (forall {A} -> M' A -> M' T) ->
-    (forall {A} -> M A -> M' A) ->
-    FMFT M A -> (M' A -x- M A)
-  runFMFTLift' runAtom liftT (liftF x) = liftT x , x
-  runFMFTLift' runAtom liftT (forkF m) = runAtom (fst $ runFMFTLift' runAtom liftT m) , return tt
-  runFMFTLift' runAtom liftT (returnF x) = return x , return x
-  runFMFTLift' runAtom liftT (bindF m f) =
-      ((fst $ runFMFTLift' runAtom liftT m) >>= fst o runFMFTLift' runAtom liftT o f) ,
-      origBind
-    where origBind = (snd $ runFMFTLift' runAtom liftT m) >>= snd o runFMFTLift' runAtom liftT o f
+-- FMFTMonadRun : MonadRun FMFT
+-- FMFTMonadRun = record { run = propagate }
+--   where
+--     instance
+--       _ = FMFTMonad
+--       _ = FMFTMonadTrans
 
-  runFMFTLift : {{mon : Monad M}} -> {{mon' : Monad M'}} ->
-    (forall {A} -> M' A -> M' T) ->
-    (forall {A} -> M A -> M' A) ->
-    FMFT M A -> M' A
-  runFMFTLift runAtom liftT = fst o runFMFTLift' runAtom liftT
-
-flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
-flush lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
-
-boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
-
-{-# TERMINATING #-}
-propagate : {{mon : Monad M}} -> FMFT M A -> M A
-propagate {M = M} m = do
-    (a , lst) <- runFMFT m
-    propagate' lst
-    return a
-  where
-    propagate' : ActList (FMFT M) -> M (ActList (FMFT M))
-    propagate' [] = return []
-    propagate' m  = flush m >>= propagate'
-
--- flushLift : {{mon : Monad M'}} ->
---   (forall {A B} -> M A -> M' B) ->
---   ActList (FMFT M) ->
---   M' (ActList (FMFT M))
---   -- TODO : Problem is that we need to get the list of next actions somehow...in a guaranteed fashion...
---   -- SOLUTION : lift this whole thing into a state transformer.
---   -- Run the original and prolly not get a value, but make it still gather the forks somehow...
--- flushLift liftT lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
-
-FMFTMonadRun : MonadRun FMFT
-FMFTMonadRun = record { run = propagate }
-  where
-    instance
-      _ = FMFTMonad
-      _ = FMFTMonadTrans
-
-{-}
-
-instance
-  StateTMS : {{mon : Monad M}} ->  MonadState S (StateT S M)
-  StateTMS {S = S} {{mon}} = StateTMonadState S mon
-
-  StateTMon : {{mon : Monad M}} -> Monad (StateT S M)
-  StateTMon {S = S} {{mon}} = StateTMonad S mon
--}
 
 open import AgdaAsciiPrelude.TrustMe
 

@@ -66,9 +66,8 @@ testEqProp : Maybe Nat
 testEqProp = flip runStdForkingVarMonad read do
   v <- new
   v' <- new
-  --fork $ v' =p> v
-  fork $ read ((eqThreshold 0) <bt$> v') >>= write v   -- >> read ((eqThreshold 10) <bt$> v')
-  --write v' 10
+  fork $ v' =p> v
+  write v' 10
   return v
 
 testEqPropResult : testEqProp === just 10

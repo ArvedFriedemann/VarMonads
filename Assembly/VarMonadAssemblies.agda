@@ -103,7 +103,7 @@ instance
   _ = FMFTMonad
   _ = FMFTMonadFork
   _ = FMFTMonadTrans
-  _ = FMFTMonadRun
+  -- _ = FMFTMonadRun
   _ = ISTOTVar
   _ = ISTOSVar
   _ = PEqToEq
@@ -175,20 +175,21 @@ open runFreeThresholdVarMonadPropagation
 instance
   _ = stdSpecModifyVarMonad
 
-runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $ propagate $ propagateL m >>= propagateL o r
-  where
-    instance
-      _ : Monad (stdSpecMonad o Maybe)
-      _ = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = stdSpecMonad} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
+-- runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
+-- runStdForkingVarMonad m r = runDefVarMonad $ propagate $ propagateL m >>= propagateL o r
+--   where
+--     instance
+--       _ : Monad (stdSpecMonad o Maybe)
+--       _ = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = stdSpecMonad} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
+--
+--     propagateL : stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
+--     propagateL = runFMFTLift {M' = stdSpecMonad o Maybe} (\m -> _>>_ {M = stdSpecMonad} m (return $ just tt) ) (\m -> fst <$> runFNCD (m []))
 
-    propagateL : stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
-    propagateL = runFMFTLift {M' = stdSpecMonad o Maybe} (\m -> _>>_ {M = stdSpecMonad} m (return $ just tt) ) (\m -> fst <$> runFNCD (m []))
-  --                         runDefVarMonad $
-  --                             propagate $
-  --                             runFNCD {M = stdSpecMonad}
-  --                               (fst <$> (propagateL m >>= propagateL o r) [])
-  -- where propagateL = runFMFTLift (runFNCD {M = stdSpecMonad})
+runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
+runStdForkingVarMonad m r = runDefVarMonad $
+                              propagate $
+                              runFNCD {M = stdSpecMonad}
+                                (fst <$> (propagate m >>= propagate o r) [])
 
 {-NOTES on problems:
 
