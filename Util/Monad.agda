@@ -8,7 +8,7 @@ private
   variable
     A B S : Set
     M : Set -> Set
-    MT : (Set -> Set) -> Set -> Set
+    MT MT' : (Set -> Set) -> Set -> Set
 
 module _ {M : Set -> Set} {{mon : Monad M}} where
 
@@ -39,12 +39,33 @@ record MonadRun (MT : (Set -> Set) -> Set -> Set) : Set where
     run : {{mon : Monad M}} -> MT M A -> M A
     overlap {{mt}} : MonadTrans MT
 
+
+MonadStateTFromTrans : {{monT : Monad (MT M)}} {{mon : Monad M}} {{mt : MonadTrans MT}} {{ms : MonadState S M}} -> MonadState S (MT M)
+MonadStateTFromTrans {{monT}} {{mon}} {{mt}} {{ms}} = record {
+  monad = it ;
+  get = liftT get ;
+  put = liftT o put }
+  where
+    open MonadState ms
+    open MonadTrans mt
+
+MonadTransTrans :
+  {{mt : MonadTrans MT}}
+  {{mt' : MonadTrans MT'}}
+  {{mon : forall {M} -> {{mon' : Monad M}} -> Monad (MT' M)}}
+  -> MonadTrans (MT o MT')
+MonadTransTrans {{mt}} {{mt'}} = record { liftT = liftTMT o liftTMT' }
+  where
+    open MonadTrans mt renaming (liftT to liftTMT)
+    open MonadTrans mt' renaming (liftT to liftTMT')
+
 open MonadTrans {{...}}
 
 MonadTransStateT : MonadTrans (StateT S)
 MonadTransStateT = record { liftT = \m s -> (_, s) <$> m }
 
 open MonadState {{...}} hiding (_<$>_; _>>_; _>>=_; return)
+
 
 MonadReaderFromState :
   {{mon : Monad M}}

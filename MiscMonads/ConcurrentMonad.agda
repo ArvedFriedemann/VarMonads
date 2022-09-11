@@ -62,53 +62,54 @@ FMFTMonadFork = record {
     mon = record { return = returnF ; _>>=_ = bindF }
   }
 
-open MonadTrans {{...}}
-open MonadRun {{...}}
-open MonadFork {{...}}
+module _ where
+  open MonadTrans {{...}}
+  open MonadRun {{...}}
+  open MonadFork {{...}}
 
-FMFTMonadForkFromRun : {{mon : Monad (MT M)}} {{mt : MonadRun MT}} {{mf : MonadFork M}} -> MonadFork (MT M)
-FMFTMonadForkFromRun = record { fork = liftT o fork o run }
+  FMFTMonadForkFromRun : {{mon : Monad (MT M)}} {{mt : MonadRun MT}} {{mf : MonadFork M}} -> MonadFork (MT M)
+  FMFTMonadForkFromRun = record { fork = liftT o fork o run }
 
-FMFTMonad : Monad (FMFT M)
-FMFTMonad = record {
-  return = returnF ;
-  _>>=_ = bindF }
+  FMFTMonad : Monad (FMFT M)
+  FMFTMonad = record {
+    return = returnF ;
+    _>>=_ = bindF }
 
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
-module _ {{mon : Monad M}} where
+module _ {{mon : Monad M}} {{ms : MonadState (ActList (FMFT M')) M}} (liftT : forall {A} -> M' A -> M A) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
-  instance
-    _ = MonadStateStateT
-    _ = MonadStateT
-    _ = MonadTransStateT
+  -- instance
+  --   _ = MonadStateStateT
+  --   _ = MonadStateT
+  --   _ = MonadTransStateT
 
-  ActState = StateT (ActList (FMFT M))
-
-  runFMFT : FMFT M A -> ActState M A
+  runFMFT : FMFT M' A -> M A
   runFMFT (liftF m) = liftT m
   runFMFT (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_)
   runFMFT (returnF x) = return x
   runFMFT (bindF m f) = runFMFT m >>= runFMFT o f
 
-  flush : ActState M T
-  flush = get >>= \s -> put [] >> (void $ sequenceM (map runFMFT s))
+  module _ (run : M T -> M T) where
 
-  -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-  -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
+    flush : M T
+    flush = get >>= \s -> put [] >> (void $ sequenceM (map (run o runFMFT) s))
 
-  {-# TERMINATING #-}
-  propagate : FMFT M A -> M A
-  propagate m = fst <$> (do
-      a <- runFMFT m
-      propagate'
-      return a) []
-    where
-      propagate' : ActState M T
-      propagate' = getS >>= \{
-          [] -> return tt ;
-          _  -> flush >> propagate'
-        }
+    -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
+    -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
+
+    {-# TERMINATING #-}
+    propagate : FMFT M' A -> M A
+    propagate m = do
+        a <- runFMFT m
+        propagate'
+        return a
+      where
+        propagate' : M T
+        propagate' = getS >>= \{
+            [] -> return tt ;
+            _  -> flush >> propagate'
+          }
 
 
 -- FMFTMonadRun : MonadRun FMFT
