@@ -39,6 +39,17 @@ testWrite = flip runStdForkingVarMonad read do
 testWriteResult : testWrite === just 10
 testWriteResult = refl
 
+testRead : Maybe Nat
+testRead = flip runStdForkingVarMonad read do
+  v <- new
+  write v 10
+  read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+  write v 20
+  return v
+
+testReadResult : testRead === just 20
+testReadResult = refl
+
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
   v <- new

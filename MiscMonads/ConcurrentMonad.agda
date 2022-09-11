@@ -94,14 +94,24 @@ module _ where
   instance
     _ = FMFTMonad
 
-  runFMFTLift : {{mon' : Monad M'}} ->
+
+  runFMFTLift' : {{mon : Monad M}} -> {{mon' : Monad M'}} ->
+    (forall {A} -> M' A -> M' T) ->
+    (forall {A} -> M A -> M' A) ->
+    FMFT M A -> (M' A -x- M A)
+  runFMFTLift' runAtom liftT (liftF x) = liftT x , x
+  runFMFTLift' runAtom liftT (forkF m) = runAtom (fst $ runFMFTLift' runAtom liftT m) , return tt
+  runFMFTLift' runAtom liftT (returnF x) = return x , return x
+  runFMFTLift' runAtom liftT (bindF m f) =
+      ((fst $ runFMFTLift' runAtom liftT m) >>= fst o runFMFTLift' runAtom liftT o f) ,
+      origBind
+    where origBind = (snd $ runFMFTLift' runAtom liftT m) >>= snd o runFMFTLift' runAtom liftT o f
+
+  runFMFTLift : {{mon : Monad M}} -> {{mon' : Monad M'}} ->
     (forall {A} -> M' A -> M' T) ->
     (forall {A} -> M A -> M' A) ->
     FMFT M A -> M' A
-  runFMFTLift runAtom liftT (liftF x) = liftT x
-  runFMFTLift runAtom liftT (forkF m) = runAtom $ runFMFTLift runAtom liftT m
-  runFMFTLift runAtom liftT (returnF x) = return x
-  runFMFTLift runAtom liftT (bindF m f) = runFMFTLift runAtom liftT m >>= runFMFTLift runAtom liftT o f
+  runFMFTLift runAtom liftT = fst o runFMFTLift' runAtom liftT
 
 flush : {{mon : Monad M}} -> ActList (FMFT M) -> M (ActList (FMFT M))
 flush lst = concat <$> sequenceM (map ((snd <$>_) o runFMFT) lst)
