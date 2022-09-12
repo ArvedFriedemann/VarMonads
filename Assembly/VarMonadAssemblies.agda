@@ -213,7 +213,7 @@ runStdForkingVarMonad m r = {!!}
       _ = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = stdSpecMonad} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
 
       propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSubM A
-      propagateL m = fst <$> propagate {M' = stdSubM} liftT (\m sf sb -> {!void o runFNCD {M = stdSpecMonad}!}) m [] --TODO: lift this back up!
+      propagateL m = fst <$> propagate {M' = stdSubM} liftT (\m sf sb -> {! void $ runFNCD {M = stdSpecMonad} (void $ m sf sb)!}) m [] --TODO: lift this back up!
 
 
 {-NOTES on problems:
