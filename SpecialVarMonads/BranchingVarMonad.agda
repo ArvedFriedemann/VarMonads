@@ -135,6 +135,8 @@ module ConnectionOperations
 
   open MonadReader {{...}} using (reader; local)
   open MonadFork mf
+  open import Util.Lattice
+  open BoundedMeetSemilattice {{...}}
 
   ask : {{mr : MonadReader A M''}} -> M'' A
   ask = reader id
@@ -178,12 +180,18 @@ module ConnectionOperations
   getParent (SVarC lst v) = do
     (c? , (SVarC lstpar vpar)) <- getParentAndCreated? (SVarC lst v)
     when c? (fork $ vpar =p> v)
+    -- when c? (fork $ v =p> vpar)
     return (SVarC lstpar vpar)
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
     (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
     when c? (fork $ v =p> vc)
+    -- v =p> vc
+    -- fork $ read (eqThreshold (top , empty , nothing) <bt$> v) >>= write vc --doesn't work with fork...
+    -- fork $ read v >>= write vc --doesn't work with fork...
+    -- read v >>= write vc
+    -- when c? (fork $ vc =p> v)
     return (SVarC lstpar vc)
 
 
@@ -207,12 +215,12 @@ module ConnectionOperations
 
   open ConstrDefVarMonad bvm using () renaming (modify' to modifyAtom')
 
-  CDVM : ConstrDefVarMonad K M (SVar V S)
-  CDVM = record {
-    new = ask >>= newSVar' ;
-    read = getLocalVar >=> \{(SVarC _ v) -> fst <$> read v};
-    write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
-                    atomically (modifyAtom' v (map1 (const x) )) } }
+  -- CDVM : ConstrDefVarMonad K M (SVar V S)
+  -- CDVM = record {
+  --   new = ask >>= newSVar' ;
+  --   read = getLocalVar >=> \{(SVarC _ v) -> fst <$> read v};
+  --   write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
+  --                   atomically (modifyAtom' v (map1 (const x) )) } }
 
   --we have to go the long way with new TVars here because SVars do not have a BijTFunctor instance, even when their original variable has one...
   ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)
