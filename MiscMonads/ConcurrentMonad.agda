@@ -77,7 +77,11 @@ module _ where
 
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
-module _ {{mon : Monad M}} {{ms : MonadState (ActList (FMFT M')) M}} (liftT : forall {A} -> M' A -> M A) where
+
+module _
+    {{mon : Monad M}}
+    {{ms : MonadState (ActList (FMFT M')) M}}
+    (liftT : forall {A} -> M' A -> M A) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
   -- instance
   --   _ = MonadStateStateT

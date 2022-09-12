@@ -1,5 +1,5 @@
 {-# OPTIONS --type-in-type #-}
-{-# OPTIONS --overlapping-instances #-}
+--{-# OPTIONS --overlapping-instances #-}
 module Assembly.VarMonadAssemblies where
 
 open import AgdaAsciiPrelude.AsciiPrelude
@@ -95,12 +95,18 @@ instance
   _ = MonadStateT
   _ = MonadStateStateT
   _ = MonadTransStateT
+  _ : Monad id
+  _ = record {
+    return = id ;
+    _>>=_ = \a f -> f a }
   -- _ : {{monFMFT : Monad (FMFT M) }}{{mon : Monad M}} {{ms : MonadState S M}} -> MonadState S (FMFT M)
   -- _ = MonadStateTFromTrans {{mt = FMFTMonadTrans}}
   -- _ = MonadTransTrans
-  _ = MonadReaderFromState
+  -- _ = MonadReaderFromState
   -- _ = MonadReaderFromRun
-  _ = MonadStateTId
+
+  -- _ = MonadStateTId
+
   _ = MonadFNCDVarMon
   _ = PlainMonadSTM
   _ = FMFTMonad
@@ -109,7 +115,7 @@ instance
   -- _ = FMFTMonadRun
   _ = ISTOTVar
   _ = ISTOSVar
-  _ = PEqToEq
+  --_ = PEqToEq
   _ = PEqTVar
   cISTOTVar : {{ISTO (Sigma Set V)}} -> ISTO (TVar K V S)
   cISTOTVar = FromSigmaISTO {{isto = ISTOTVar}}
@@ -170,18 +176,14 @@ instance
 stdBranchingVarMonad : BranchingVarMonad stdK stdBranchingVarMonadM stdBranchingVarMonadV stdBranchingVarMonadS
 stdBranchingVarMonad = let
     tvm = forkTVM $ readerTVM (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr})
-    -- _ : Monad stdBranchingVarMonadM
-    -- _ = it
-    -- msfork : MonadState (List (stdSubM T)) stdBranchingVarMonadM
-    -- msfork = it
-    -- msbranch : MonadState (List (stdBranchingVarMonadS)) stdBranchingVarMonadM
-    -- msbranch = MonadStateTFromTrans {{ mt = MonadTransTrans }}
+    instance
+      _ = PEqToEq
   in ThresholdVarMonad=>BranchingVarMonad
           {S = T}
           {{eq = PEqToEq {{ PEqTVar {K = stdSpecK} }} }}
           {{bvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
           {{tvm = tvm }}
-          --{{mr = MonadReaderFromState {{mt = msbranch }} }}
+          {{mr = FMFTMonadRead {{ MonadReaderFromState }} }}
 
 
 stdMonadFork : MonadFork stdBranchingVarMonadM
@@ -203,17 +205,37 @@ instance
 --     propagateL = runFMFTLift {M' = stdSpecMonad o Maybe} (\m -> _>>_ {M = stdSpecMonad} m (return $ just tt) ) (\m -> fst <$> runFNCD (m []))
 
 runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = {!!}
+runStdForkingVarMonad m r = runDefVarMonad $
+                              fst <$> propagate
+                                {M = StateT _ defaultVarMonadStateM}
+                                {M' = defaultVarMonadStateM}
+                                liftT
+                                id
+                                (propagateL m >>= propagateL o r)
+                                []
                           -- runDefVarMonad $
                           --     propagate $
                           --     runFNCD {M = stdSpecMonad}
                           --       (fst <$> (propagateL m >>= propagateL o r) [])
     where
-      _ : Monad (stdSpecMonad o Maybe)
-      _ = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = stdSpecMonad} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
+      _ : Monad (defaultVarMonadStateM)
+      _ = it
 
-      propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSubM A
-      propagateL m = fst <$> propagate {M' = stdSubM} liftT (\m sf sb -> {! void $ runFNCD {M = stdSpecMonad} (void $ m sf sb)!}) m [] --TODO: lift this back up!
+      compMaybe : {{mon : Monad M}} -> Monad (M o Maybe)
+      compMaybe {M = M} = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = M} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
+      instance
+        _ = compMaybe {M = stdSpecMonad}
+
+
+      propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
+      propagateL m = fst <$> propagate
+                              {M = StateT (List (FMFT stdSubM T)) (stdSpecMonad o Maybe)}
+                              {M' = stdSubM}
+                              (\m -> liftT $ fst <$> runFNCD {M = stdSpecMonad} (m []))
+                              (\ m ->  _>>_ {{r = MonadStateT}} m (return tt))
+                              m
+                              []
+
 
 
 {-NOTES on problems:
