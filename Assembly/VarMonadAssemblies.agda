@@ -210,7 +210,7 @@ runStdForkingVarMonad m r = runDefVarMonad $
                                 {M = StateT _ defaultVarMonadStateM}
                                 {M' = defaultVarMonadStateM}
                                 liftT
-                                (\m -> _>>_ {{r = MonadStateT}} m (return tt))
+                                id
                                 (propagateL m >>= propagateL o r)
                                 []
                           -- runDefVarMonad $

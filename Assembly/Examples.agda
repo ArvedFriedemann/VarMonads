@@ -80,6 +80,7 @@ testBranch = flip runStdForkingVarMonad read do
   branched \push -> fork $ do
     -- l <- reader length
     -- write v (l + 100)
+    --write v 20
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     push (write v 15)
   return v
