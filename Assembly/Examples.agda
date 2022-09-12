@@ -84,5 +84,5 @@ testBranch = flip runStdForkingVarMonad read do
     push (write v 15)
   return v
 
--- testBranchResult : testBranch === just 15
--- testBranchResult = refl
+testBranchResult : testBranch === just 15
+testBranchResult = refl

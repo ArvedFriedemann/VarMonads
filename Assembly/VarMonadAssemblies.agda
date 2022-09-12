@@ -210,7 +210,7 @@ runStdForkingVarMonad m r = runDefVarMonad $
                                 {M = StateT _ defaultVarMonadStateM}
                                 {M' = defaultVarMonadStateM}
                                 liftT
-                                id
+                                (\m -> _>>_ {{r = MonadStateT}} m (return tt))
                                 (propagateL m >>= propagateL o r)
                                 []
                           -- runDefVarMonad $
@@ -232,7 +232,7 @@ runStdForkingVarMonad m r = runDefVarMonad $
                               {M = StateT (List (FMFT stdSubM T)) (stdSpecMonad o Maybe)}
                               {M' = stdSubM}
                               (\m -> liftT $ fst <$> runFNCD {M = stdSpecMonad} (m []))
-                              (\ m ->  _>>_ {{r = MonadStateT}} m (return tt))
+                              (\ m s -> m s >>= return o maybe' id (tt , s) )
                               m
                               []
 
