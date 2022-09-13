@@ -180,6 +180,10 @@ module runFreeThresholdVarMonadPropagation
                         maybe' (left o cont)
                                (right (B , to , cont))
                                (to xm)}) props
+    --tried all those out. On write, there are succeeding propagators in here. 
+    -- ... | ([] , failed) = (x' , failed) , [] --WARNING
+    -- ... | (succd , []) = (x' , []) , succd --WARNING
+    -- ... | ([] , []) = (x' , []) , [] --WARNING
     ... | (succd , failed) = (xm , failed) , succd
 
     runPropagators : List (M T) -> M T
