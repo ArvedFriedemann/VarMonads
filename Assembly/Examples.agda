@@ -68,11 +68,12 @@ testEqProp = flip runStdForkingVarMonad read do
   v' <- new
   v'' <- new
   fork $ v' =p> v
-  fork $ v'' =p> v
-  write v'' 10
+  fork $ v'' =p> v'
+  --write v'' 10
+  fork $ fork $ fork $ write v'' 20
   return v
 
-testEqPropResult : testEqProp === just 10
+testEqPropResult : testEqProp === just 20
 testEqPropResult = refl
 
 testBranch : Maybe Nat
