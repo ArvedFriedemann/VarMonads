@@ -226,14 +226,14 @@ runStdForkingVarMonad m r = runDefVarMonad $
       instance
         _ = compMaybe {M = stdSpecMonad}
 
-
       propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
-      propagateL m = fst <$> propagate
-                              {M = StateT (List (FMFT stdSubM T)) (stdSpecMonad o Maybe)}
+      propagateL m = (fst o fst) <$> propagate
+                              {M = StateT (List (FMFT stdSubM T)) $ StateT (List stdBranchingVarMonadS) $ stdSpecMonad o Maybe}
                               {M' = stdSubM}
-                              (\m -> liftT $ fst <$> runFNCD {M = stdSpecMonad} (m []))
-                              (\ m s -> m s >>= return o maybe' id (tt , s) )
+                              (\m sf sb -> (\{(a , sb') -> (a , sf) , sb'}) <$> runFNCD {M = stdSpecMonad} (m sb) )
+                              (\ m sf sb -> m sf sb >>= return o maybe' id ((tt , sf) , sb) )
                               m
+                              []
                               []
 
 
