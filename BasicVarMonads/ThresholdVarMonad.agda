@@ -180,7 +180,7 @@ module runFreeThresholdVarMonadPropagation
                         maybe' (left o cont)
                                (right (B , to , cont))
                                (to xm)}) props
-    --tried all those out. On write, there are succeeding propagators in here. 
+    --tried all those out. On write, there are succeeding propagators in here.
     -- ... | ([] , failed) = (x' , failed) , [] --WARNING
     -- ... | (succd , []) = (x' , []) , succd --WARNING
     -- ... | ([] , []) = (x' , []) , [] --WARNING
@@ -214,7 +214,7 @@ module runFreeThresholdVarMonadPropagation
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
     where newprop = runFNCDCont o cont >=> runFNCDtoVarProp
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> M (Maybe A)
+  runFNCD : FNCDVarMon K (TVar K' V) A -> MaybeT M A
   runFNCD m = do
     AorCont <- runFNCDCont m
     runFNCDtoVarProp AorCont

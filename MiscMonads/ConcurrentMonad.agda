@@ -56,7 +56,7 @@ data FMFT (M : Set -> Set) : Set -> Set where
   returnF : A -> FMFT M A
   bindF : FMFT M A -> (A -> FMFT M B) -> FMFT M B
 
-FMFTMonadFork : {{mon : Monad M}} -> MonadFork (FMFT M)
+FMFTMonadFork : MonadFork (FMFT M)
 FMFTMonadFork = record {
     fork = forkF ;
     mon = record { return = returnF ; _>>=_ = bindF }
@@ -114,6 +114,23 @@ module _
             [] -> return tt ;
             _  -> flush >> propagate'
           }
+
+module _ {M' : Set -> Set} {{mon : Monad M}} where
+
+  instance
+    _ = MonadStateStateT
+    _ = MonadStateT
+    -- _ = MonadMaybeT
+
+  -- {{r = MonadMaybeT {{mon}}}} is definitely correct!
+  propagateInterrupted : (forall {A} -> M' A -> MaybeT M A) -> FMFT M' A -> MaybeT M A
+  propagateInterrupted liftM fmft = _<$>_ {{r = MonadMaybeT {{mon}}}} fst $ propagate
+    {M = StateT (ActList (FMFT M')) (MaybeT M)}
+    {{mon = {!!}}}
+    {!   !}
+    {!   !}
+    fmft
+    []
 
 
 -- FMFTMonadRun : MonadRun FMFT
