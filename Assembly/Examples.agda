@@ -36,8 +36,8 @@ testWrite = flip runStdForkingVarMonad read do
   write v 10
   return v
 
--- testWriteResult : testWrite === just 10
--- testWriteResult = refl
+testWriteResult : testWrite === just 10
+testWriteResult = refl
 
 testRead : Maybe Nat
 testRead = flip runStdForkingVarMonad read do
@@ -47,8 +47,8 @@ testRead = flip runStdForkingVarMonad read do
   write v 20
   return v
 
--- testReadResult : testRead === just 20
--- testReadResult = refl
+testReadResult : testRead === just 20
+testReadResult = refl
 
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
@@ -56,11 +56,11 @@ testFork = flip runStdForkingVarMonad read do
   fork $ do
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     write v 20
-  write v 10
+  fork $ fork $ write v 10
   return v
 
--- testForkResult : testFork === just 20
--- testForkResult = refl
+testForkResult : testFork === just 20
+testForkResult = refl
 
 testEqProp : Maybe Nat
 testEqProp = flip runStdForkingVarMonad read do
