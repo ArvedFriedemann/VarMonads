@@ -132,7 +132,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     {{mon = MonadStateT {{MonadMaybeT}}}}
     {{ms = MonadStateStateT {{MonadMaybeT}}}}
     (liftT {{mon = MonadMaybeT}} o liftM)
-    id
+    (\m s -> m s >>= maybe' (return o just) (return (just (tt , s))))
     fmft
     []
 
