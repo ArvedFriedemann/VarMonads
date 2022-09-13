@@ -120,18 +120,33 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   instance
     _ = MonadStateStateT
     _ = MonadStateT
+    _ = MonadTransStateT
     -- _ = MonadMaybeT
+
+  open MonadTrans {{...}}
 
   -- {{r = MonadMaybeT {{mon}}}} is definitely correct!
   propagateInterrupted : (forall {A} -> M' A -> MaybeT M A) -> FMFT M' A -> MaybeT M A
   propagateInterrupted liftM fmft = _<$>_ {{r = MonadMaybeT {{mon}}}} fst $ propagate
     {M = StateT (ActList (FMFT M')) (MaybeT M)}
-    {{mon = {!!}}}
-    {!   !}
-    {!   !}
+    {{mon = MonadStateT {{MonadMaybeT}}}}
+    {{ms = MonadStateStateT {{MonadMaybeT}}}}
+    (liftT {{mon = MonadMaybeT}} o liftM)
+    id
     fmft
     []
 
+module _ {M' : Set -> Set} {{mon : Monad M}} where
+
+  instance
+    _ = MonadStateT
+    _ = MonadStateStateT
+    _ = MonadTransStateT
+
+  open MonadTrans {{...}}
+
+  propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
+  propagateNormal liftM fmft = fst <$> propagate (liftT o liftM) id fmft []
 
 -- FMFTMonadRun : MonadRun FMFT
 -- FMFTMonadRun = record { run = propagate }

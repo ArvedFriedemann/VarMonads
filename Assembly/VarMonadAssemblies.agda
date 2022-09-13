@@ -196,7 +196,7 @@ module _ where
 
 open runFreeThresholdVarMonadPropagation
 
-instance
+-- instance
   -- _ = stdSpecModifyVarMonad
 
 -- runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
@@ -212,7 +212,7 @@ instance
 open import BasicVarMonads.BaseVarMonad
 
 runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad ( (\m s -> {!fst $ m s!}) $ propagate {M = StateT _ defaultVarMonadStateM} {{mon = ?}} {{ms = ?}} {!   !} {!   !} subrun [])
+runStdForkingVarMonad m r = runDefVarMonad $ propagateNormal id (propagateL m >>= propagateL o r)
     where
       -- _ : Monad (defaultVarMonadStateM)
       -- _ = it
@@ -223,7 +223,9 @@ runStdForkingVarMonad m r = runDefVarMonad ( (\m s -> {!fst $ m s!}) $ propagate
       --   _ = compMaybe {M = stdSpecMonad}
       instance
         _ = BaseVarMonad.mon defaultVarMonad
-        _ = MonadMaybeT {{FMFTMonad {M = stdSubM}}}
+        -- _ = MonadMaybeT {{FMFTMonad {M = stdSubM}}}
+        _ : forall {M} -> Monad (MaybeT (FMFT M))
+        _ = MonadMaybeT {{FMFTMonad}}
         -- _ = MonadStateT
         -- _ = MonadStateStateT
         -- _ = MonadTransMaybeT
@@ -235,6 +237,8 @@ runStdForkingVarMonad m r = runDefVarMonad ( (\m s -> {!fst $ m s!}) $ propagate
         stdmon : Monad (stdSpecMonad)
         stdmon = FMFTMonad
 
+        _ = MonadFNCDVarMon
+
       stdMT : Monad (MaybeT stdSpecMonad)
       stdMT = MonadMaybeT {{stdmon}}
 
@@ -242,14 +246,7 @@ runStdForkingVarMonad m r = runDefVarMonad ( (\m s -> {!fst $ m s!}) $ propagate
 
 
       propagateL : forall {A} -> stdBranchingVarMonadM A -> MaybeT stdSpecMonad A
-      propagateL m = _<$>_ {{r = MonadMaybeT {{FMFTMonad}}}} fst (propagate
-        {M = StateT (List (FMFT stdSubM T)) (MaybeT stdSpecMonad)}
-        {{mon = MonadStateT {{MonadMaybeT {{FMFTMonad}}}} }}
-        {{ms = MonadStateStateT {{MonadMaybeT {{FMFTMonad}}}} }}
-        (\m s -> _<$>_ {{r = MonadMaybeT {{FMFTMonad}}}} ((_, s) o fst) $ runFNCD {{mvm = stdSpecModifyVarMonad}} (m []) )
-        id
-        m
-        [])
+      propagateL m = propagateInterrupted (\m -> runFNCD $ fst <$> (m [])) m
 
       subrun = (_>>=_ {{r = stdMT}} (propagateL m) (propagateL o r))
 
