@@ -79,7 +79,6 @@ testBranch : Maybe Nat
 testBranch = flip runStdForkingVarMonad read do
   v <- new
   -- write v 10
-  write v 10
   branched \push -> fork $ do
     -- l <- reader length
     -- write v (l + 100)
@@ -92,6 +91,7 @@ testBranch = flip runStdForkingVarMonad read do
   --     push (write v 15)
   --   return v'
   -- write v' 10
+  write v 10
   return v
 
 testBranchResult : testBranch === just 15

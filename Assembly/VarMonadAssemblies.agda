@@ -205,14 +205,19 @@ instance
 --     propagateL = runFMFTLift {M' = stdSpecMonad o Maybe} (\m -> _>>_ {M = stdSpecMonad} m (return $ just tt) ) (\m -> fst <$> runFNCD (m []))
 
 runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $
-                              fst <$> propagate
-                                {M = StateT _ defaultVarMonadStateM}
+runStdForkingVarMonad m r = (fst <$>_) $ maybe' id (nothing , []) $ runDefVarMonad $
+                              propagate
+                                {M = StateT (List (FMFT defaultVarMonadStateM T)) (defaultVarMonadStateM o Maybe)}
                                 {M' = defaultVarMonadStateM}
-                                liftT
-                                id
-                                (propagateL m >>= propagateL o r)
+                                {{mon = mond }}
+                                {{ms = MonadStateStateT {{ compMaybe {M = defaultVarMonadStateM} }} }}
+                                (\m s -> _<$>_ {{r = defaultVarMonadStateMonad}} (just o (_, s)) m )
+                                (\m s -> _>>=_ {{r = defaultVarMonadStateMonad}} (m s) \mab -> return {{r = defaultVarMonadStateMonad}} (maybe' (\r -> just r) (just (tt , s)) mab))--m s >>= return o maybe' id (tt , s))
+                                ( (propagateL m) >>= (maybe' (propagateL o r) (return nothing)) )
                                 []
+                                 -- {M = StateT (List (FMFT defaultVarMonadStateM T)) (defaultVarMonadStateM o Maybe)}
+                                 -- {M' = defaultVarMonadStateM o Maybe}
+                                 -- {{mon = mond}}
                           -- runDefVarMonad $
                           --     propagate $
                           --     runFNCD {M = stdSpecMonad}
@@ -225,6 +230,13 @@ runStdForkingVarMonad m r = runDefVarMonad $
       compMaybe {M = M} = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = M} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
       instance
         _ = compMaybe {M = stdSpecMonad}
+        _ = compMaybe {M = defaultVarMonadStateM}
+
+      mond : Monad (StateT (List (FMFT defaultVarMonadStateM T)) (defaultVarMonadStateM o Maybe))
+      mond = MonadStateT {{compMaybe {M = defaultVarMonadStateM}}}
+
+      defaultVarMonadStateMonad : Monad (defaultVarMonadStateM)
+      defaultVarMonadStateMonad = it
 
       propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
       propagateL m = (fst o fst) <$> propagate
