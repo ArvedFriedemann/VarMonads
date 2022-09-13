@@ -77,7 +77,7 @@ record BranchingVarMonad
       {{mon : Monad M'}} ->
       {{mr : MonadReader (List VS) M' }} ->
       (forall {A} -> M A -> M' A) ->
-      ((forall {B} -> M' B -> M' B) -> M' A) ->
+      ((forall {B} -> M' B -> M' B) -> M' A) -> --Transformation has to preserve state!
       M' A
   open ThresholdVarMonad tvm public
   branched : ((forall {B} -> M B -> M B) -> M A) -> M A
@@ -130,16 +130,11 @@ module ConnectionOperations
   {{bvm : ConstrDefVarMonad K M' V}}
   {{stm : MonadSTM M' M}}
   {{mf : MonadFork M}}
-  {{tvm : ThresholdVarMonad K M V}}
-  {{mr : MonadReader (List (V S)) M}} where
+  {{tvm : ThresholdVarMonad K M V}} where
 
-  open MonadReader {{...}} using (reader; local)
   open MonadFork mf
   open import Util.Lattice
   open BoundedMeetSemilattice {{...}}
-
-  ask : {{mr : MonadReader A M''}} -> M'' A
-  ask = reader id
 
   open MonadSTM stm
   open import AgdaAsciiPrelude.Instances
@@ -195,9 +190,8 @@ module ConnectionOperations
     return (SVarC lstpar vc)
 
 
-  getLocalVar : {{k : K A}} -> SVar V S A -> M (SVar V S A)
-  getLocalVar (SVarC origin v) = do
-    target <- ask
+  getLocalVar : {{k : K A}} -> SVar V S A -> List (V S) -> M (SVar V S A)
+  getLocalVar (SVarC origin v) target = do
     let (ancToTarget , ancToOrigin) =
           if headEq {{eq = eq}} target origin
           then ([] , [])
@@ -222,17 +216,32 @@ module ConnectionOperations
   --   write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
   --                   atomically (modifyAtom' v (map1 (const x) )) } }
 
+  open MonadReader {{...}} using (local; reader)
+  open MonadTrans {{...}}
+
+  ask : {{mr : MonadReader A M''}} -> M'' A
+  ask = reader id
+
+  instance
+    _ = MonadReaderFromState
+    _ = MonadTransStateT
+    _ = MonadStateT
+    _ = MonadStateStateT
+
   --we have to go the long way with new TVars here because SVars do not have a BijTFunctor instance, even when their original variable has one...
-  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)
+  ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K (StateT (List (V S)) M) (TVar K (SVar V S)) (V S)
   ThresholdVarMonad=>BranchingVarMonad = record {
     tvm = record {
       cvm = record {
-        new = (TVarC _ (just <,> id)) <$> (ask >>= newSVar') ;
+        new = (TVarC _ (just <,> id)) <$> (ask >>= liftT o newSVar') ;
         read = \{(TVarC OrigT f v) ->
-          getLocalVar v >>= read o
-            onSVarV (halfSVarBijTFunc f <bt$>_) } ;
+          ask >>= liftT o (getLocalVar v >=> read o
+            onSVarV (halfSVarBijTFunc f <bt$>_)) } ;
         write = \{(TVarC OrigT f v) x ->
-          getLocalVar v >>= flip write x o
-            onSVarV (halfSVarBijTFunc f <bt$>_)} } ;
+          ask >>= liftT o ( getLocalVar v >=> flip write x o
+            onSVarV (halfSVarBijTFunc f <bt$>_) )} } ;
       tvbf = TVarBijTFunctor } ;
-    branchedLift = \liftT m -> liftT new >>= \vs -> local (vs ::_) (m (local $ drop 1))  }--new >>= \vs -> local (vs ::_) (m (local $ drop 1)) }
+    branchedLift = \{{_}} {{mr}} liftT' m -> do
+        vs <- liftT' (liftT (new {A = S}))
+        local {{r = mr}} (vs ::_) (m (local {{r = mr}} $ drop 1))
+       }

@@ -62,6 +62,29 @@ FMFTMonadFork = record {
     mon = record { return = returnF ; _>>=_ = bindF }
   }
 
+MonadForkFromTrans :
+  {{mon : Monad (MT M)}} ->
+  {{mt : MonadTrans MT}} ->
+  {{mf : MonadFork M}} ->
+  {{mr : MonadRun MT}} ->
+  MonadFork (MT M)
+MonadForkFromTrans {{mt = mt}} = record { fork = liftT {{r = mt}} o fork o run }
+  where
+    open MonadTrans {{...}}
+    open MonadFork {{...}}
+    open MonadRun {{...}} hiding (mt)
+
+MonadForkFromStateT :
+  {{mf : MonadFork M}} ->
+  MonadFork (StateT S M)
+MonadForkFromStateT = record { fork = \m s -> (_, s) <$> (fork (m s)) }
+  where
+    open MonadState {{...}} hiding (_<$>_) renaming (get to getS; _>>_ to _>>S_; _>>=_ to _>>=S_; return to returnS)
+    open MonadFork {{...}}
+    instance
+      _ = MonadStateT
+      _ = MonadStateStateT
+
 module _ where
   open MonadTrans {{...}}
   open MonadRun {{...}}

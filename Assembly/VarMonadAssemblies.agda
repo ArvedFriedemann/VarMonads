@@ -107,6 +107,8 @@ instance
 
   -- _ = MonadStateTId
 
+  _ = MonadForkFromStateT
+
   _ = MonadFNCDVarMon
   _ = PlainMonadSTM
   _ = FMFTMonad
@@ -131,7 +133,7 @@ forkTVM = liftThresholdVarMonad liftF
 open ConnectionOperations
 
 stdSpecMonad : Set -> Set
-stdSpecMonad = FMFT defaultVarMonadStateM
+stdSpecMonad = FMFT $ defaultVarMonadStateM
 
 stdSpecModifyVarMonad : ModifyVarMonad stdSpecMonad NatPtr
 stdSpecModifyVarMonad = liftModifyVarMonad liftF defaultModifyVarMonad
@@ -142,15 +144,21 @@ stdSpecK = SpecK stdK stdSpecMonad
 stdBranchingVarMonadS : Set
 stdBranchingVarMonadS = TVar (SpecK stdK stdSpecMonad) NatPtr T
 
-stdSubM : Set -> Set
-stdSubM = StateT (List stdBranchingVarMonadS)
-              (FNCDVarMon stdK (TVar (SpecK stdK stdSpecMonad) NatPtr))
 
-stdForkingPrepM : Set -> Set
-stdForkingPrepM = StateT (List (stdSubM T)) stdSubM
+-- stdForkingPrepM : Set -> Set
+-- stdForkingPrepM = StateT (List (stdSubM T)) stdSubM
+
+stdSubM : Set -> Set
+stdSubM = FNCDVarMon stdK (TVar (SpecK stdK stdSpecMonad) NatPtr)
+
+stdFMFTVarMonadM : Set -> Set
+stdFMFTVarMonadM = FMFT stdSubM
 
 stdBranchingVarMonadM : Set -> Set
-stdBranchingVarMonadM = FMFT stdSubM --stdForkingPrepM
+stdBranchingVarMonadM = StateT
+  (List (TVar (SpecK stdK stdSpecMonad) NatPtr T))
+  stdFMFTVarMonadM
+
 
 stdBranchingVarMonadV : Set -> Set
 stdBranchingVarMonadV = TVar stdK (SVar (TVar (SpecK stdK stdSpecMonad) NatPtr) T)
@@ -173,9 +181,9 @@ instance
       local' f (returnF x) = returnF x
       local' f (bindF m mf) = bindF (local' f m) (local' f o mf)
 
-stdBranchingVarMonad : BranchingVarMonad stdK stdBranchingVarMonadM stdBranchingVarMonadV stdBranchingVarMonadS
+stdBranchingVarMonad : BranchingVarMonad stdK _ stdBranchingVarMonadV stdBranchingVarMonadS
 stdBranchingVarMonad = let
-    tvm = forkTVM $ readerTVM (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr})
+    tvm = forkTVM $ (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr})
     instance
       _ = PEqToEq
   in ThresholdVarMonad=>BranchingVarMonad
@@ -183,7 +191,6 @@ stdBranchingVarMonad = let
           {{eq = PEqToEq {{ PEqTVar {K = stdSpecK} }} }}
           {{bvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
           {{tvm = tvm }}
-          {{mr = FMFTMonadRead {{ MonadReaderFromState }} }}
 
 
 stdMonadFork : MonadFork stdBranchingVarMonadM
@@ -211,7 +218,7 @@ runStdForkingVarMonad m r = runDefVarMonad $
                                 {M' = defaultVarMonadStateM}
                                 liftT
                                 id
-                                (propagateL m >>= propagateL o r)
+                                (propagateL (fst <$> m []) >>= propagateL o (\m -> (fst <$> m [])) o r)
                                 []
                           -- runDefVarMonad $
                           --     propagate $
@@ -227,11 +234,12 @@ runStdForkingVarMonad m r = runDefVarMonad $
         _ = compMaybe {M = stdSpecMonad}
 
 
-      propagateL : forall {A} -> stdBranchingVarMonadM A -> stdSpecMonad (Maybe A)
+      propagateL : forall {A} -> stdFMFTVarMonadM A -> stdSpecMonad (Maybe A)
       propagateL m = fst <$> propagate
                               {M = StateT (List (FMFT stdSubM T)) (stdSpecMonad o Maybe)}
                               {M' = stdSubM}
-                              (\m -> liftT $ fst <$> runFNCD {M = stdSpecMonad} (m []))
+                              -- TODO : This throws away the branching state!
+                              (\m -> liftT $ runFNCD {M = stdSpecMonad} m )
                               (\ m s -> m s >>= return o maybe' id (tt , s) )
                               m
                               []
