@@ -125,14 +125,13 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
 
   open MonadTrans {{...}}
 
-  -- {{r = MonadMaybeT {{mon}}}} is definitely correct!
   propagateInterrupted : (forall {A} -> M' A -> MaybeT M A) -> FMFT M' A -> MaybeT M A
-  propagateInterrupted liftM fmft = _<$>_ {{r = MonadMaybeT {{mon}}}} fst $ propagate
-    {M = StateT (ActList (FMFT M')) (MaybeT M)}
-    {{mon = MonadStateT {{MonadMaybeT}}}}
-    {{ms = MonadStateStateT {{MonadMaybeT}}}}
-    (liftT {{mon = MonadMaybeT}} o liftM)
-    (\m s -> m s >>= maybe' (return o just) (return (just (tt , s))))
+  propagateInterrupted liftM fmft = _<$>_ {M = M} fst $ propagate
+    {M = MaybeT $ StateT (ActList (FMFT M')) M}
+    {{mon = MonadMaybeT {{MonadStateT}}}}
+    {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
+    (\m s -> (_, s) <$> (liftM m)) --(liftT {{mon = MonadTransT}} o liftM)
+    id --(\m s -> m s >>= maybe' (return o just) (return (just (tt , s))))
     fmft
     []
 
