@@ -94,24 +94,23 @@ module _
   runFMFT cont (returnF x) = cont x --return x
   runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
-  flush : M T
-  flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (runFMFT return) s))
+  module _ (run : M T -> M T) where
 
-  -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-  -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
+    flush : M T
+    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT return) s))
 
-  {-# TERMINATING #-}
-  propagate : FMFT M' A -> M A
-  propagate m = do
-      a <- runFMFT return m
-      propagate'
-      return a
-    where
-      propagate' : M T
-      propagate' = getS >>= \{
-          [] -> return tt ;
-          _  -> flush >> propagate'
-        }
+    {-# TERMINATING #-}
+    propagate : FMFT M' A -> M A
+    propagate m = do
+        a <- runFMFT return m
+        propagate'
+        return a
+      where
+        propagate' : M T
+        propagate' = getS >>= \{
+            [] -> return tt ;
+            _  -> flush >> propagate'
+          }
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
@@ -148,6 +147,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     {{mon = MonadMaybeT {{MonadStateT}}}}
     {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
     (\m cont s -> liftM m (\m' -> return $ just $ cont m' s) >>= maybe' id (return (nothing , s)) )--(_, s) <$> liftM m (\m' -> fst <$> cont m' s) ) --WARNING! this might swallow the state
+    (\ m s -> m s >>= \{(_ , s') -> return (just tt , s')})
     fmft
     []
 
@@ -164,7 +164,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   open import AgdaAsciiPrelude.TrustMe
 
   propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
-  propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) fmft []
+  propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) id fmft []
     --(maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft
 
 -- FMFTMonadRun : MonadRun FMFT
