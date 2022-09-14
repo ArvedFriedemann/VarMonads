@@ -166,7 +166,7 @@ module runFreeThresholdVarMonadPropagation
   {{keq : K derives Eq}}
   {{kbmsl : K derives BoundedMeetSemilattice}} where
   open BoundedMeetSemilattice {{...}}
-  open MonadFork mf
+  open MonadFork mf hiding (mon)
   open ModifyVarMonad mvm
 
   K' : Set -> Set
@@ -207,15 +207,13 @@ module runFreeThresholdVarMonadPropagation
     }
 
   {-# TERMINATING #-}
-  runFNCDtoVarProp : A or (FNCDCont K (TVar K' V) A) -> M T
-  runFNCDtoVarProp (left x) = return tt
-  runFNCDtoVarProp (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+  runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
+  runFNCDtoVarProp cont' (left x) = cont' x
+  runFNCDtoVarProp cont' (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
-      (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
-    where newprop = runFNCDCont o cont >=> runFNCDtoVarProp
+      (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
+    where
+      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return {{r = mon}} tt)
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> MaybeT M A
-  runFNCD m = do
-    AorCont <- runFNCDCont m
-    runFNCDtoVarProp AorCont
-    return $ maybeLeft AorCont
+  runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
+  runFNCD m cont = runFNCDCont m >>= runFNCDtoVarProp cont

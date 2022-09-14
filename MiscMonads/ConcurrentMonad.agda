@@ -81,53 +81,37 @@ FMFTMonadTrans = record { liftT = liftF }
 module _
     {{mon : Monad M}}
     {{ms : MonadState (ActList (FMFT M')) M}}
-    (liftT : forall {A} -> M' A -> M A) where
+    (liftM : forall {A B} -> M' A -> (A -> M B) -> M B) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
   -- instance
   --   _ = MonadStateStateT
   --   _ = MonadStateT
   --   _ = MonadTransStateT
 
-  -- TODO : first monad needs the second monad as continuation!
-  -- lift operation should take continuation!
-  runFMFT : FMFT M' A -> M A
-  runFMFT (liftF m) = liftT m
-  runFMFT (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_)
-  runFMFT (returnF x) = return x
-  runFMFT (bindF m f) = runFMFT m >>= runFMFT o f
+  runFMFT : (A -> M B) -> FMFT M' A -> M B
+  runFMFT cont (liftF m) = liftM m cont
+  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >> cont tt --WARNING
+  runFMFT cont (returnF x) = cont x --return x
+  runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
-  --THis is the very same as above. but: monad could first be propagated into itself. Problem: no ciritcal section for continuation
-  -- module AltRun {{mon' : Monad M'}} where
-  --   open MonadTrans {{...}} renaming (liftT to liftT')
-  --   instance
-  --     _ = MonadTransStateT
-  --
-  --   runFMFT' : FMFT M' A -> StateT (ActList (FMFT M')) M' A
-  --   runFMFT' (liftF x) = liftT' x
-  --   runFMFT' (forkF m) = modifyS {{r = MonadStateStateT}} (void {{mon = FMFTMonad}} m ::_)
-  --   runFMFT' (returnF x) = return {{r = MonadStateT {{mon'}}}} x
-  --   runFMFT' (bindF m f) = _>>=_ {{r = MonadStateT {{mon'}}}} (runFMFT' m) (runFMFT' o f)
+  flush : M T
+  flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (runFMFT return) s))
 
-  module _ (run : M T -> M T) where
+  -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
+  -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
 
-    flush : M T
-    flush = get >>= \s -> put [] >> (void $ sequenceM (map (run o runFMFT) s))
-
-    -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-    -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
-
-    {-# TERMINATING #-}
-    propagate : FMFT M' A -> M A
-    propagate m = do
-        a <- runFMFT m
-        propagate'
-        return a
-      where
-        propagate' : M T
-        propagate' = getS >>= \{
-            [] -> return tt ;
-            _  -> flush >> propagate'
-          }
+  {-# TERMINATING #-}
+  propagate : FMFT M' A -> M A
+  propagate m = do
+      a <- runFMFT return m
+      propagate'
+      return a
+    where
+      propagate' : M T
+      propagate' = getS >>= \{
+          [] -> return tt ;
+          _  -> flush >> propagate'
+        }
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
@@ -158,13 +142,12 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
 
   open MonadTrans {{...}}
 
-  propagateInterrupted : (forall {A} -> M' A -> MaybeT M A) -> FMFT M' A -> MaybeT M A
+  propagateInterrupted : (forall {A B} -> M' A -> (A -> MaybeT M B) -> MaybeT M B) -> FMFT M' A -> MaybeT M A
   propagateInterrupted liftM fmft = _<$>_ {M = M} fst $ propagate
     {M = MaybeT $ StateT (ActList (FMFT M')) M}
     {{mon = MonadMaybeT {{MonadStateT}}}}
     {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
-    (\m s -> (_, s) <$> liftM m) --(liftT {{mon = MonadTransT}} o liftM)
-    id --(\m s -> m s >>= maybe' (return o just) (return (just (tt , s))))
+    (\m cont s -> (_, s) <$> liftM m (\m' -> fst <$> cont m' s) ) --WARNING! this might swallow the state
     fmft
     []
 
@@ -181,7 +164,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   open import AgdaAsciiPrelude.TrustMe
 
   propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
-  propagateNormal liftM fmft = fst <$> propagate (liftT o liftM) id fmft []
+  propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) fmft []
     --(maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft
 
 -- FMFTMonadRun : MonadRun FMFT
