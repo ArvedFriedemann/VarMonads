@@ -130,7 +130,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     {M = MaybeT $ StateT (ActList (FMFT M')) M}
     {{mon = MonadMaybeT {{MonadStateT}}}}
     {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
-    (\m s -> (_, s) <$> (liftM m)) --(liftT {{mon = MonadTransT}} o liftM)
+    (\m s -> (_, s) <$> liftM m) --(liftT {{mon = MonadTransT}} o liftM)
     id --(\m s -> m s >>= maybe' (return o just) (return (just (tt , s))))
     fmft
     []
@@ -144,8 +144,10 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
 
   open MonadTrans {{...}}
 
+  open import AgdaAsciiPrelude.TrustMe
+
   propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
-  propagateNormal liftM fmft = fst <$> propagate (liftT o liftM) id fmft []
+  propagateNormal liftM fmft = (maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft --fst <$> propagate (liftT o liftM) id fmft []
 
 -- FMFTMonadRun : MonadRun FMFT
 -- FMFTMonadRun = record { run = propagate }
