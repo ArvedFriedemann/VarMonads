@@ -57,7 +57,6 @@ testFork = flip runStdForkingVarMonad read do
   fork $ do
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     write v 20
-
   return v
 
 testForkResult : testFork === just 20
