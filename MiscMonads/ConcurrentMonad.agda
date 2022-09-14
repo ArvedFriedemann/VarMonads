@@ -88,11 +88,25 @@ module _
   --   _ = MonadStateT
   --   _ = MonadTransStateT
 
+  -- TODO : first monad needs the second monad as continuation!
+  -- lift operation should take continuation!
   runFMFT : FMFT M' A -> M A
   runFMFT (liftF m) = liftT m
   runFMFT (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_)
   runFMFT (returnF x) = return x
   runFMFT (bindF m f) = runFMFT m >>= runFMFT o f
+
+  --THis is the very same as above. but: monad could first be propagated into itself. Problem: no ciritcal section for continuation
+  -- module AltRun {{mon' : Monad M'}} where
+  --   open MonadTrans {{...}} renaming (liftT to liftT')
+  --   instance
+  --     _ = MonadTransStateT
+  --
+  --   runFMFT' : FMFT M' A -> StateT (ActList (FMFT M')) M' A
+  --   runFMFT' (liftF x) = liftT' x
+  --   runFMFT' (forkF m) = modifyS {{r = MonadStateStateT}} (void {{mon = FMFTMonad}} m ::_)
+  --   runFMFT' (returnF x) = return {{r = MonadStateT {{mon'}}}} x
+  --   runFMFT' (bindF m f) = _>>=_ {{r = MonadStateT {{mon'}}}} (runFMFT' m) (runFMFT' o f)
 
   module _ (run : M T -> M T) where
 
