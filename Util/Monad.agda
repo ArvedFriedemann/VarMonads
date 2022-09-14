@@ -102,3 +102,9 @@ MonadReaderFromRun = record {
   monad = it ;
   reader = liftT o reader ;
   local = \f -> liftT o local f o run }
+
+-- Is in AsciiPrelude
+-- MonadId : Monad id
+-- MonadId = record {
+--   return = id ;
+--   _>>=_ = \a f -> f a }

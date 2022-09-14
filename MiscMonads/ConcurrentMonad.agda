@@ -117,6 +117,25 @@ module _
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
+  -- open import AgdaAsciiPrelude.Instances
+  --
+  -- module _ where
+  --
+  --   instance
+  --     _ = MonadMaybeT {{MonadStateTId {S = Nat}}}
+  --     --_ = MonadStateTId
+  --
+  --     mst : MonadState Nat (MaybeT (StateT Nat id))
+  --     mst = MonadStateTFromTrans {{monT = MonadMaybeT {{MonadStateTId}} }} {{mon = MonadStateTId}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateTId }}
+  --
+  --   --open MonadState mst using () renaming (put to putS)
+  --
+  --   test' : MaybeT (StateT Nat id) T
+  --   test' = return 4 >>= const (return {{r = MonadStateTId}} nothing) >> put 10
+  --
+  -- test : test' 5 === (nothing , 5)
+  -- test = refl
+
   instance
     _ = MonadStateStateT
     _ = MonadStateT
@@ -135,6 +154,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     fmft
     []
 
+
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
   instance
@@ -147,7 +167,8 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   open import AgdaAsciiPrelude.TrustMe
 
   propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
-  propagateNormal liftM fmft = (maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft --fst <$> propagate (liftT o liftM) id fmft []
+  propagateNormal liftM fmft = fst <$> propagate (liftT o liftM) id fmft []
+    --(maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft
 
 -- FMFTMonadRun : MonadRun FMFT
 -- FMFTMonadRun = record { run = propagate }
