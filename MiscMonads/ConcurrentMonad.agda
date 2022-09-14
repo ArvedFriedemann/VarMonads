@@ -90,7 +90,7 @@ module _
 
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
-  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >> cont tt --WARNING
+  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >> cont tt
   runFMFT cont (returnF x) = cont x --return x
   runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
@@ -147,7 +147,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     {M = MaybeT $ StateT (ActList (FMFT M')) M}
     {{mon = MonadMaybeT {{MonadStateT}}}}
     {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
-    (\m cont s -> (_, s) <$> liftM m (\m' -> fst <$> cont m' s) ) --WARNING! this might swallow the state
+    (\m cont s -> liftM m (\m' -> return $ just $ cont m' s) >>= maybe' id (return (nothing , s)) )--(_, s) <$> liftM m (\m' -> fst <$> cont m' s) ) --WARNING! this might swallow the state
     fmft
     []
 
