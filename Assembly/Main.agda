@@ -12,9 +12,9 @@ showRes nothing = putStrLn "    No value"
 
 main : Main
 main = run $ do
-  putStrLn "testWrite"
-  showRes testWrite
+  -- putStrLn "testWrite"
+  -- showRes testWrite
   putStrLn "testFork"
   showRes testFork
-  putStrLn "testBranch"
-  showRes testBranch
+  -- putStrLn "testBranch"
+  -- showRes testBranch

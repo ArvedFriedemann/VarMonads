@@ -90,7 +90,7 @@ module _
 
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
-  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >> cont tt
+  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >>= cont
   runFMFT cont (returnF x) = cont x --return x
   runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 

@@ -7,6 +7,7 @@ open import AgdaAsciiPrelude.Instances
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Derivation
 open import Util.Lattice
+open import Debug.Trace
 
 private
   variable
@@ -184,7 +185,7 @@ module runFreeThresholdVarMonadPropagation
     -- ... | ([] , failed) = (x' , failed) , [] --WARNING
     -- ... | (succd , []) = (x' , []) , succd --WARNING
     -- ... | ([] , []) = (x' , []) , [] --WARNING
-    ... | (succd , failed) = (xm , failed) , succd
+    ... | (succd , failed) = (xm , failed) , trace ("succdlength : " ++s showN (length succd)) succd
 
     runPropagators : List (M T) -> M T
     runPropagators = void o sequenceM o map fork
@@ -209,11 +210,11 @@ module runFreeThresholdVarMonadPropagation
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
   runFNCDtoVarProp cont' (left x) = cont' x
-  runFNCDtoVarProp cont' (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+  runFNCDtoVarProp cont' (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> _) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
     where
-      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return {{r = mon}} tt)
+      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> maybe' (const $ return tt) (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
   runFNCD m cont = runFNCDCont m >>= runFNCDtoVarProp cont

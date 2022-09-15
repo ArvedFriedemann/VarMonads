@@ -212,7 +212,7 @@ open runFreeThresholdVarMonadPropagation
 open import BasicVarMonads.BaseVarMonad
 
 runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} id (propagateL m >>= propagateL o r)
+runStdForkingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r)
     where
       -- _ : Monad (defaultVarMonadStateM)
       -- _ = it
