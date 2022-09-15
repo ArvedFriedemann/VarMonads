@@ -51,10 +51,18 @@ testRead = flip runStdForkingVarMonad read do
 -- testReadResult : testRead === just 20
 -- testReadResult = refl
 
+open import Util.Monad
+open MonadTrans {{...}}
+open import BasicVarMonads.ConstrainedVarMonad
+instance
+  _ = MonadTransStateT
+  _ = FMFTMonad
+  _ = MonadFNCDVarMon
+
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
   v <- new
-  fork $ fork $ write v (trace "writing 10" 10)
+  fork $ write v (trace "writing 10" 10)
   fork $ do
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     write v (trace "writing 20" 20)

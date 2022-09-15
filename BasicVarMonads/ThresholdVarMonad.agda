@@ -185,7 +185,7 @@ module runFreeThresholdVarMonadPropagation
     -- ... | ([] , failed) = (x' , failed) , [] --WARNING
     -- ... | (succd , []) = (x' , []) , succd --WARNING
     -- ... | ([] , []) = (x' , []) , [] --WARNING
-    ... | (succd , failed) = (xm , failed) , trace ("succdlength : " ++s showN (length succd)) succd
+    ... | (succd , failed) = (xm , failed) , succd
 
     runPropagators : List (M T) -> M T
     runPropagators = void o sequenceM o map fork
@@ -200,21 +200,31 @@ module runFreeThresholdVarMonadPropagation
   runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
     (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
     <$> read OVar
-  runFNCDCont (writeF v x) = left <$> propagatorWrite v x
+  runFNCDCont (writeF v x) = trace "writing propagatorWrite" $ left <$> propagatorWrite v x
   runFNCDCont (returnF x) = left <$> return x
   runFNCDCont (bindF m f) = runFNCDCont m >>= \{
       (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
+  inspectFNCD : FNCDVarMon K (TVar K' V) A -> String
+  inspectFNCD newF = "newF"
+  inspectFNCD (readF x) = "readF"
+  inspectFNCD (writeF v x) = "writeF"
+  inspectFNCD (returnF x) = "returnF"
+  inspectFNCD (bindF m f) = "bindF (" ++s inspectFNCD m ++s ") f"
+
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
   runFNCDtoVarProp cont' (left x) = cont' x
-  runFNCDtoVarProp cont' (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> _) v) , cont)) =
+  runFNCDtoVarProp cont' (right (D , (TVarC _ {{(OrigT , refl , k)}} (to <,> _) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
     where
-      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> maybe' (const $ return tt) (return tt)
+      newprop : D -> M T
+      newprop = runFNCDCont o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x) o cont
+                >=> runFNCDtoVarProp (cont' o (trace "running cont after freeze")) o (\{(left x) -> trace "unfreezing cont'" (left x) ; (right c) -> trace "unfreezing failed" (right c)})
+                >=> maybe' (const $ return tt) (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
-  runFNCD m cont = runFNCDCont m >>= runFNCDtoVarProp cont
+  runFNCD m cont = runFNCDCont (trace (inspectFNCD m) m) >>= runFNCDtoVarProp cont

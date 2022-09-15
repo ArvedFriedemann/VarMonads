@@ -6,6 +6,7 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import AgdaAsciiPrelude.Instances
 open import Util.Monad
 open import Category.Monad.State renaming (RawMonadState to MonadState)
+open import Debug.Trace
 
 private
   variable
@@ -90,14 +91,14 @@ module _
 
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
-  runFMFT cont (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_) >>= cont
+  runFMFT cont (forkF m) = (trace "forking!" $ modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
   runFMFT cont (returnF x) = cont x --return x
   runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
   module _ (run : M T -> M T) where
 
     flush : M T
-    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT return) s))
+    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT return o (trace "running fork")) s))
 
     {-# TERMINATING #-}
     propagate : FMFT M' A -> M A
