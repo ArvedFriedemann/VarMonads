@@ -193,7 +193,7 @@ module runFreeThresholdVarMonadPropagation
     ... | (succd , failed) = (xm , failed) , succd
 
     runPropagators : List (M T) -> M T
-    runPropagators = void o sequenceM o map fork
+    runPropagators = void o sequenceM o map fork --WARNING
 
     propagatorWrite : TVar K' V A -> A -> M T
     propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
@@ -229,7 +229,7 @@ module runFreeThresholdVarMonadPropagation
 
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
-  runFNCDtoVarProp cont' (left x) = cont' (trace "putting x into cont'" x)
+  runFNCDtoVarProp cont' (left x) = cont' (trace "putting x into cont'" x) >>= return o maybe' (just o trace "cont' gave value") (trace "cont' failed" nothing)
   runFNCDtoVarProp cont' (right (D , (TVarC _ {{(OrigT , refl , k)}} (to <,> _) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
@@ -237,9 +237,10 @@ module runFreeThresholdVarMonadPropagation
       -- TODO : Long story short: continuation is never executed and does not read its input value.
       -- possible solution: Probably the failed maybe thing is at it again.
       newprop : D -> M T
-      newprop = runFNCDCont {- o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x)-} o cont
+      newprop = trace "starting continuation" return
+                >=> runFNCDCont {- o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x)-} o cont
                 >=> (runFNCDtoVarProp (cont' o (trace "running cont after freeze"))) o (\{(left x) -> trace "receiving (left x)" (left x) ; (right c) -> trace "receiving (right c)" (right c)})
-                >=> maybe' (const $ return tt) (return tt)
+                >=> maybe' (const $ trace "returned just after continuation" $ return tt) (trace "returned nothing after continuation" $ return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
   runFNCD m cont = runFNCDCont (trace "runFNCD on " $ trace (inspectFNCD m) m) >>= runFNCDtoVarProp cont

@@ -104,12 +104,12 @@ module _
   runFMFT cont (liftF m) = liftM m cont
   runFMFT cont (forkF m) = (trace "forking!" $ modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
   runFMFT cont (returnF x) = cont x --return x
-  runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m --WARNING: This gives a continuation that took the value from the failed computation!
+  runFMFT cont (bindF m f) = runFMFT (trace "fork-ping" (runFMFT cont o f)) m --WARNING: This gives a continuation that took the value from the failed computation!
 
   module _ (run : M T -> M T) where
 
     flush : M T
-    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT return o (trace "running fork")) s))
+    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
 
     {-# TERMINATING #-}
     propagate : FMFT M' A -> M A

@@ -60,10 +60,11 @@ instance
   _ = MonadFNCDVarMon
 
 testFork : Maybe Nat
-testFork = flip runStdForkingVarMonad (const $ return 1) {-read-} do
+testFork = flip runStdForkingVarMonad read do
   v <- new {A = Nat}
   fork $ write v (trace "writing 10" 10)
   fork $ do
+    --write v 15 --this is written, which means that the continuation mechanic on the FMFT side technically works
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
     write v (trace "writing 20" 20)
   return v
