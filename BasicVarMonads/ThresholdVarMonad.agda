@@ -201,13 +201,13 @@ module runFreeThresholdVarMonadPropagation
 
   runFNCDCont : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
   --notice how we write an empty propagator list back. This is not a problem because we ignore that during the write!
-  runFNCDCont newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
-  runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
+  runFNCDCont newF = trace "runFNCDCont newF" $ (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
+  runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) = trace "runFNCDCont readF" $
     (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
     <$> read OVar
-  runFNCDCont (writeF v x) = left <$> propagatorWrite v x
-  runFNCDCont (returnF x) = left <$> return x
-  runFNCDCont (bindF m f) = runFNCDCont m >>= \{
+  runFNCDCont (writeF v x) = trace "runFNCDCont writeF" $ left <$> propagatorWrite v x
+  runFNCDCont (returnF x) = trace "runFNCDCont returnF" $ left <$> return x
+  runFNCDCont (bindF m f) = trace "runFNCDCont bindF" $ runFNCDCont m >>= \{
       (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
@@ -235,9 +235,9 @@ module runFreeThresholdVarMonadPropagation
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
     where
       -- TODO : Long story short: continuation is never executed and does not read its input value.
-      -- possible solution: Probably the failed maybe thing is at it again. 
+      -- possible solution: Probably the failed maybe thing is at it again.
       newprop : D -> M T
-      newprop = runFNCDCont o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x) o cont
+      newprop = runFNCDCont {- o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x)-} o cont
                 >=> (runFNCDtoVarProp (cont' o (trace "running cont after freeze"))) o (\{(left x) -> trace "receiving (left x)" (left x) ; (right c) -> trace "receiving (right c)" (right c)})
                 >=> maybe' (const $ return tt) (return tt)
 

@@ -89,11 +89,22 @@ module _
   --   _ = MonadStateT
   --   _ = MonadTransStateT
 
+  -- pingIfNotReturn : FMFT M' A -> Maybe A -x- FMFT M' A
+  -- pingIfNotReturn (liftF x) = nothing , (trace "ping liftF" $ liftF x)
+  -- pingIfNotReturn (forkF m) = just tt , (trace "ping forkF" $ forkF m)
+  -- pingIfNotReturn (returnF x) = just x , returnF x
+  -- pingIfNotReturn (bindF m f) = let
+  --                                 (rm , fmft) = pingIfNotReturn m
+  --                                 (rm' , fmftf) = maybe' (pingIfNotReturn o f) (nothing , returnF tt) rm
+  --                               in rm' , bindF m f
+
+
+  {-# TERMINATING #-} --for the trace...apparently...
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
   runFMFT cont (forkF m) = (trace "forking!" $ modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
   runFMFT cont (returnF x) = cont x --return x
-  runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
+  runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m --WARNING: This gives a continuation that took the value from the failed computation!
 
   module _ (run : M T -> M T) where
 

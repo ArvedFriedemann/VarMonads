@@ -68,6 +68,7 @@ testFork = flip runStdForkingVarMonad (const $ return 1) {-read-} do
     write v (trace "writing 20" 20)
   return v
 
+
 -- testForkResult : testFork === just 20
 -- testForkResult = refl
 
