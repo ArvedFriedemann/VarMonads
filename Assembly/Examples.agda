@@ -60,8 +60,8 @@ instance
   _ = MonadFNCDVarMon
 
 testFork : Maybe Nat
-testFork = flip runStdForkingVarMonad read do
-  v <- new
+testFork = flip runStdForkingVarMonad (const $ return 1) {-read-} do
+  v <- new {A = Nat}
   fork $ write v (trace "writing 10" 10)
   fork $ do
     read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)

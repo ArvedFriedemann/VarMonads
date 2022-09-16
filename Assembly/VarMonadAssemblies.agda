@@ -186,7 +186,7 @@ module _ where
     in ThresholdVarMonad=>BranchingVarMonad
             {S = T}
             {{eq = PEqToEq {{ PEqTVar {K = stdSpecK} }} }}
-            {{bvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
+            {{cvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
             {{tvm = tvm }}
             {{mr = FMFTMonadRead {{ MonadReaderFromState }} }}
 

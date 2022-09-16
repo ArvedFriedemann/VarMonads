@@ -127,7 +127,7 @@ module ConnectionOperations
   {{eq : Eq (V S)}}
   {{ks : K S}}
   {{kvs : K derives (K o SVarPType V S) }}
-  {{bvm : ConstrDefVarMonad K M' V}}
+  {{cvm : ConstrDefVarMonad K M' V}}
   {{stm : MonadSTM M' M}}
   {{mf : MonadFork M}}
   {{tvm : ThresholdVarMonad K M V}}
@@ -147,7 +147,7 @@ module ConnectionOperations
     _ = MonadMaybe
 
   module _ where
-    open ConstrDefVarMonad bvm
+    open ConstrDefVarMonad cvm
 
     newSVar : {{k : K A}} -> List (V S) -> M' (SVar V S A)
     newSVar lst = SVarC lst <$> new
@@ -170,7 +170,7 @@ module ConnectionOperations
       modify' vc \{(a , mp , par) -> (a , mp , just (SVarC path v))}
       return (is-nothing par , (SVarC pc vc))
 
-  open ThresholdVarMonad tvm
+  open ThresholdVarMonad tvm hiding (cvm)
   open import SpecialVarMonads.Propagators.BasicPropagators
   open EqTPropagators
   instance
@@ -212,15 +212,6 @@ module ConnectionOperations
 
   newSVar' : {{k : K A}} -> List (V S) -> M (SVar V S A)
   newSVar' = atomically o newSVar
-
-  open ConstrDefVarMonad bvm using () renaming (modify' to modifyAtom')
-
-  -- CDVM : ConstrDefVarMonad K M (SVar V S)
-  -- CDVM = record {
-  --   new = ask >>= newSVar' ;
-  --   read = getLocalVar >=> \{(SVarC _ v) -> fst <$> read v};
-  --   write = \v x -> getLocalVar v >>= \{(SVarC _ v) ->
-  --                   atomically (modifyAtom' v (map1 (const x) )) } }
 
   --we have to go the long way with new TVars here because SVars do not have a BijTFunctor instance, even when their original variable has one...
   ThresholdVarMonad=>BranchingVarMonad : BranchingVarMonad K M (TVar K (SVar V S)) (V S)

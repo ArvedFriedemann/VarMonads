@@ -165,10 +165,15 @@ module runFreeThresholdVarMonadPropagation
   {{mvm : ModifyVarMonad M V}}
   {{mf : MonadFork M}}
   {{keq : K derives Eq}}
-  {{kbmsl : K derives BoundedMeetSemilattice}} where
+  {{kbmsl : K derives BoundedMeetSemilattice}}
+  {{showv : forall {A} -> Show (V A)}} where
   open BoundedMeetSemilattice {{...}}
   open MonadFork mf hiding (mon)
   open ModifyVarMonad mvm
+
+  instance
+    _ : forall {A V K} -> {{forall {B} -> Show (V B)}} -> Show (TVar K V A)
+    _ = record { show = \{ (TVarC OrigT f OVar) -> "TVar#" ++s show OVar} }
 
   K' : Set -> Set
   K' = SpecK K M
@@ -200,31 +205,41 @@ module runFreeThresholdVarMonadPropagation
   runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
     (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
     <$> read OVar
-  runFNCDCont (writeF v x) = trace "writing propagatorWrite" $ left <$> propagatorWrite v x
+  runFNCDCont (writeF v x) = left <$> propagatorWrite v x
   runFNCDCont (returnF x) = left <$> return x
   runFNCDCont (bindF m f) = runFNCDCont m >>= \{
       (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
+  shallowInspectFNCD : FNCDVarMon K (TVar K' V) A -> (Maybe A -x- String)
+  shallowInspectFNCD newF = nothing , "newF"
+  shallowInspectFNCD (readF v) = nothing , "readF " ++s show v
+  shallowInspectFNCD (writeF v x) = just tt , "writeF " ++s show v
+  shallowInspectFNCD (returnF x) = just x , "ret"
+  shallowInspectFNCD (bindF m f) = let
+      (rm , sm) = shallowInspectFNCD m
+      (rm' , sm') = maybe' (shallowInspectFNCD o f) (nothing , " f") rm
+    in rm' , (if (_==_ {{r = eqNat}} (lengthString sm) 3)
+              then sm'
+              else ("bindF (" ++s sm ++s ") (" ++s sm' ++s ")"))
+
   inspectFNCD : FNCDVarMon K (TVar K' V) A -> String
-  inspectFNCD newF = "newF"
-  inspectFNCD (readF x) = "readF"
-  inspectFNCD (writeF v x) = "writeF"
-  inspectFNCD (returnF x) = "returnF"
-  inspectFNCD (bindF m f) = "bindF (" ++s inspectFNCD m ++s ") f"
+  inspectFNCD = snd o shallowInspectFNCD
 
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
-  runFNCDtoVarProp cont' (left x) = cont' x
+  runFNCDtoVarProp cont' (left x) = cont' (trace "putting x into cont'" x)
   runFNCDtoVarProp cont' (right (D , (TVarC _ {{(OrigT , refl , k)}} (to <,> _) v) , cont)) =
     modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
       (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators >> return nothing
     where
+      -- TODO : Long story short: continuation is never executed and does not read its input value.
+      -- possible solution: Probably the failed maybe thing is at it again. 
       newprop : D -> M T
       newprop = runFNCDCont o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x) o cont
-                >=> runFNCDtoVarProp (cont' o (trace "running cont after freeze")) o (\{(left x) -> trace "unfreezing cont'" (left x) ; (right c) -> trace "unfreezing failed" (right c)})
+                >=> (runFNCDtoVarProp (cont' o (trace "running cont after freeze"))) o (\{(left x) -> trace "receiving (left x)" (left x) ; (right c) -> trace "receiving (right c)" (right c)})
                 >=> maybe' (const $ return tt) (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
-  runFNCD m cont = runFNCDCont (trace (inspectFNCD m) m) >>= runFNCDtoVarProp cont
+  runFNCD m cont = runFNCDCont (trace "runFNCD on " $ trace (inspectFNCD m) m) >>= runFNCDtoVarProp cont
