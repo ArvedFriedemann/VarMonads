@@ -121,11 +121,11 @@ stdSpecK = SpecK stdK stdSpecMonad
 
 
 stdBranchingVarMonadS : Set
-stdBranchingVarMonadS = TVar (SpecK stdK stdSpecMonad) NatPtr T
+stdBranchingVarMonadS = TVar (SpecK stdK stdSpecMonad) NatPtr T --TODO : use stdSpecK alias
 
 stdSubM : Set -> Set
 stdSubM = StateT (List stdBranchingVarMonadS)
-              (FNCDVarMon stdK (TVar (SpecK stdK stdSpecMonad) NatPtr))
+              (FNCDVarMon stdK (TVar (SpecK stdK stdSpecMonad) NatPtr)) --TODO : use stdSpecK alias
 
 stdForkingPrepM : Set -> Set
 stdForkingPrepM = StateT (List (stdSubM T)) stdSubM
@@ -134,7 +134,7 @@ stdBranchingVarMonadM : Set -> Set
 stdBranchingVarMonadM = FMFT stdSubM --stdForkingPrepM
 
 stdBranchingVarMonadV : Set -> Set
-stdBranchingVarMonadV = TVar stdK (SVar (TVar (SpecK stdK stdSpecMonad) NatPtr) T)
+stdBranchingVarMonadV = TVar stdK (SVar (TVar (SpecK stdK stdSpecMonad) NatPtr) T) --TODO : use stdSpecK alias
 
 module _ where
 
@@ -186,7 +186,7 @@ module _ where
     in ThresholdVarMonad=>BranchingVarMonad
             {S = T}
             {{eq = PEqToEq {{ PEqTVar {K = stdSpecK} }} }}
-            {{cvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
+            {{cvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }} --TODO : maybe do the FNCDVarMon baking first...good idea anyway
             {{tvm = tvm }}
             {{mr = FMFTMonadRead {{ MonadReaderFromState }} }}
 

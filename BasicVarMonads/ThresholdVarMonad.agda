@@ -94,11 +94,13 @@ FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
 
+open import Debug.Trace
+
 ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
 ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
-    new = new ;
-    read = read ;
-    write = write }
+    new = trace "running ThresholdVarMonadConstrDefVarMonad new" new ;
+    read = trace "running ThresholdVarMonadConstrDefVarMonad read" read ;
+    write = trace "running ThresholdVarMonadConstrDefVarMonad write" write }
   where open ThresholdVarMonad tvm
 
 -- module _ {{tvm : ThresholdVarMonad K M V}}
@@ -238,7 +240,7 @@ module runFreeThresholdVarMonadPropagation
       -- possible solution: Probably the failed maybe thing is at it again.
       newprop : D -> M T
       newprop = trace "starting continuation" return
-                >=> runFNCDCont {- o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x)-} o cont
+                >=> runFNCDCont o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x) o cont
                 >=> (runFNCDtoVarProp (cont' o (trace "running cont after freeze"))) o (\{(left x) -> trace "receiving (left x)" (left x) ; (right c) -> trace "receiving (right c)" (right c)})
                 >=> maybe' (const $ trace "returned just after continuation" $ return tt) (trace "returned nothing after continuation" $ return tt)
 
