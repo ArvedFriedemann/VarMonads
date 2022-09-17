@@ -32,7 +32,7 @@ instance
 
 
 testWrite : Maybe Nat
-testWrite = flip runStdForkingVarMonad read do
+testWrite = flip runStdBranchingVarMonad read do
   v <- new
   write v 10
   return v
@@ -41,7 +41,7 @@ testWrite = flip runStdForkingVarMonad read do
 -- testWriteResult = refl
 
 testRead : Maybe Nat
-testRead = flip runStdForkingVarMonad read do
+testRead = flip runStdBranchingVarMonad read do
   v <- new
   write v 10
   read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
@@ -60,7 +60,7 @@ instance
   _ = MonadFNCDVarMon
 
 testFork : Maybe Nat
-testFork = flip runStdForkingVarMonad read do
+testFork = flip runStdBranchingVarMonad read do
   v <- new {A = Nat}
   fork $ write v (trace "writing 10" 10)
   fork $ do
@@ -74,7 +74,7 @@ testFork = flip runStdForkingVarMonad read do
 -- testForkResult = refl
 
 testEqProp : Maybe Nat
-testEqProp = flip runStdForkingVarMonad read do
+testEqProp = flip runStdBranchingVarMonad read do
   v <- new
   v' <- new
   v'' <- new
@@ -88,7 +88,7 @@ testEqProp = flip runStdForkingVarMonad read do
 -- testEqPropResult = refl
 
 testBranch : Maybe Nat
-testBranch = flip runStdForkingVarMonad read do
+testBranch = flip runStdBranchingVarMonad read do
   v <- new
   -- write v 10
   write v 10

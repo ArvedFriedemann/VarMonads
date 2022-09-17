@@ -2,7 +2,8 @@
 module Assembly.Main where
 
 open import AgdaAsciiPrelude.AsciiPrelude hiding (_>>_; _>>=_; return)
-open import Assembly.Examples
+-- open import Assembly.Examples
+open import Assembly.ForkExamples
 
 open import IO
 

@@ -102,7 +102,6 @@ instance
 
   -- _ = MonadStateTId
 
-  _ = PlainMonadSTM
   -- _ = FMFTMonadRun
   _ = ISTOTVar
   _ = ISTOSVar
@@ -121,11 +120,11 @@ stdSpecK = SpecK stdK stdSpecMonad
 
 
 stdBranchingVarMonadS : Set
-stdBranchingVarMonadS = TVar (SpecK stdK stdSpecMonad) NatPtr T --TODO : use stdSpecK alias
+stdBranchingVarMonadS = TVar stdSpecK NatPtr T --TODO : use stdSpecK alias
 
 stdSubM : Set -> Set
 stdSubM = StateT (List stdBranchingVarMonadS)
-              (FNCDVarMon stdK (TVar (SpecK stdK stdSpecMonad) NatPtr)) --TODO : use stdSpecK alias
+              (FNCDVarMon stdK (TVar stdSpecK NatPtr)) --TODO : use stdSpecK alias
 
 stdForkingPrepM : Set -> Set
 stdForkingPrepM = StateT (List (stdSubM T)) stdSubM
@@ -134,7 +133,7 @@ stdBranchingVarMonadM : Set -> Set
 stdBranchingVarMonadM = FMFT stdSubM --stdForkingPrepM
 
 stdBranchingVarMonadV : Set -> Set
-stdBranchingVarMonadV = TVar stdK (SVar (TVar (SpecK stdK stdSpecMonad) NatPtr) T) --TODO : use stdSpecK alias
+stdBranchingVarMonadV = TVar stdK (SVar (TVar stdSpecK NatPtr) T) --TODO : use stdSpecK alias
 
 module _ where
 
@@ -152,6 +151,8 @@ module _ where
     _ = MonadFNCDVarMon
 
     _ = MonadMaybe
+
+    _ = PlainMonadSTM
 
     --better instance than the "fromRun" instance as it does not rely on a run instance
     FMFTMonadRead : {{mr : MonadReader S M}} -> MonadReader S (FMFT M)
@@ -211,28 +212,56 @@ open runFreeThresholdVarMonadPropagation
 
 open import BasicVarMonads.BaseVarMonad
 
-runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r)
-    where
-      -- _ : Monad (defaultVarMonadStateM)
-      -- _ = it
+stdForkThresholdV : Set -> Set
+stdForkThresholdV = (TVar stdSpecK NatPtr)
 
-      -- compMaybe : {{mon : Monad M}} -> Monad (M o Maybe)
-      -- compMaybe {M = M} = record { return = return o just ; _>>=_ = \m f -> _>>=_ {M = M} m (\mab -> maybe' id (return nothing) (f <$> mab)) }
-      -- instance
-      --   _ = compMaybe {M = stdSpecMonad}
+stdForkThresholdSub : Set -> Set
+stdForkThresholdSub = FNCDVarMon stdK stdForkThresholdV
+
+stdForkThresholdVarMonadM : Set -> Set
+stdForkThresholdVarMonadM = FMFT stdForkThresholdSub
+
+stdForkThresholdVarMonad : ThresholdVarMonad stdK stdForkThresholdVarMonadM stdForkThresholdV
+stdForkThresholdVarMonad = liftThresholdVarMonad liftF (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr})
+  where
+    instance _ = FMFTMonad
+
+runStdForkingVarMonad : stdForkThresholdVarMonadM B -> (B -> stdForkThresholdVarMonadM A) -> Maybe A
+runStdForkingVarMonad m r = runDefVarMonad $ propagateN (propagateL m) >>= maybe' (propagateN o propagateL o r) (return nothing) --(propagateN (propagateL m) >>= propagateN (propagateL o r))
+  where
+    instance
+      _ = BaseVarMonad.mon defaultVarMonad
+
+      _ : forall {M} -> Monad (MaybeT (FMFT M))
+      _ = MonadMaybeT {{FMFTMonad}}
+
+      -- _ = MonadTransStateT
+      _ = stdSpecModifyVarMonad
+      _ = FMFTMonadFork
+
+      stdmon : Monad (stdSpecMonad)
+      stdmon = FMFTMonad
+
+      _ = MonadFNCDVarMon --weirdly needed to prevent agda from thinking propagateInterrupted compiles to a maybe...
+
+    propagateL : forall {A} -> stdForkThresholdVarMonadM A -> MaybeT stdSpecMonad A
+    propagateL m = propagateInterrupted runFNCD m
+
+    propagateN : MaybeT stdSpecMonad A -> MaybeT defaultVarMonadStateM A
+    propagateN = propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id
+
+runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
+runStdBranchingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r) --TODO! fix read executed before end of propagation!
+    where
       instance
         _ = BaseVarMonad.mon defaultVarMonad
-        -- _ = MonadMaybeT {{FMFTMonad {M = stdSubM}}}
+
         _ : forall {M} -> Monad (MaybeT (FMFT M))
         _ = MonadMaybeT {{FMFTMonad}}
-        -- _ = MonadStateT
-        -- _ = MonadStateStateT
-        -- _ = MonadTransMaybeT
+
         _ = MonadTransStateT
         _ = stdSpecModifyVarMonad
         _ = FMFTMonadFork
-        -- _ = FMFTMonad
 
         stdmon : Monad (stdSpecMonad)
         stdmon = FMFTMonad
@@ -246,7 +275,7 @@ runStdForkingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMona
 
 
       propagateL : forall {A} -> stdBranchingVarMonadM A -> MaybeT stdSpecMonad A
-      propagateL m = propagateInterrupted (\m -> runFNCD $ fst <$> (m [])) m
+      propagateL m = propagateInterrupted (\m cont -> runFNCD (fst <$> (m [])) cont) m
 
       subrun = (_>>=_ {{r = stdMT}} (propagateL m) (propagateL o r))
 
