@@ -170,7 +170,7 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
     {M = MaybeT $ StateT (ActList (FMFT M')) M}
     {{mon = MonadMaybeT {{MonadStateT}}}}
     {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
-    (\m cont s -> liftM m (\m' -> return $ just $ cont m' s) >>= maybe' id (return (nothing , s)) )--(_, s) <$> liftM m (\m' -> fst <$> cont m' s) ) --WARNING! this might swallow the state
+    (\m cont s -> liftM m (\a -> return $ just $ cont a s) >>= maybe' id (return (nothing , s)))
     (\ m s -> m s >>= \{(_ , s') -> return (just tt , s')})
     fmft
     []

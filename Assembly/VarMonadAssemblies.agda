@@ -218,7 +218,7 @@ open runFreeThresholdVarMonadPropagation
 open import BasicVarMonads.BaseVarMonad
 
 stdForkThresholdV : Set -> Set
-stdForkThresholdV = (TVar stdSpecK NatPtr)
+stdForkThresholdV = (TVar (SpecK stdK defaultVarMonadStateM) NatPtr)
 
 stdForkThresholdSub : Set -> Set
 stdForkThresholdSub = FNCDVarMon stdK stdForkThresholdV
@@ -227,12 +227,12 @@ stdForkThresholdVarMonadM : Set -> Set
 stdForkThresholdVarMonadM = FMFT stdForkThresholdSub
 
 stdForkThresholdVarMonad : ThresholdVarMonad stdK stdForkThresholdVarMonadM stdForkThresholdV
-stdForkThresholdVarMonad = liftThresholdVarMonad liftF (SpecialFreeThresholdVarMonad {M = stdSpecMonad } {V = NatPtr})
+stdForkThresholdVarMonad = liftThresholdVarMonad liftF (SpecialFreeThresholdVarMonad {M = defaultVarMonadStateM } {V = NatPtr})
   where
     instance _ = FMFTMonad
 
 runStdForkingVarMonad : stdForkThresholdVarMonadM B -> (B -> stdForkThresholdVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $ propagateN (propagateL m) >>= maybe' (propagateN o propagateL o r) (return nothing) --(propagateN (propagateL m) >>= propagateN (propagateL o r))
+runStdForkingVarMonad m r = runDefVarMonad $ (propagateL m) >>= maybe' (propagateL o r) (return nothing) --(propagateN (propagateL m) >>= propagateN (propagateL o r))
   where
     instance
       _ = BaseVarMonad.mon defaultVarMonad
@@ -241,7 +241,8 @@ runStdForkingVarMonad m r = runDefVarMonad $ propagateN (propagateL m) >>= maybe
       _ = MonadMaybeT {{FMFTMonad}}
 
       -- _ = MonadTransStateT
-      _ = stdSpecModifyVarMonad
+      -- _ = stdSpecModifyVarMonad
+      _ = defaultModifyVarMonad
       _ = FMFTMonadFork
 
       stdmon : Monad (stdSpecMonad)
@@ -249,24 +250,30 @@ runStdForkingVarMonad m r = runDefVarMonad $ propagateN (propagateL m) >>= maybe
 
       _ = MonadFNCDVarMon --weirdly needed to prevent agda from thinking propagateInterrupted compiles to a maybe...
 
-    propagateL : forall {A} -> stdForkThresholdVarMonadM A -> MaybeT stdSpecMonad A
+    propagateL : forall {A} -> stdForkThresholdVarMonadM A -> MaybeT defaultVarMonadStateM A
     propagateL m = propagateInterrupted runFNCD m
 
-    test : (m : stdForkThresholdVarMonadM T) -> propagateL m === {!!}
-    test (liftF x) = {!   !}
-    test (forkF m) = {!   !}
-    test (returnF x) = {!   !}
-    test (bindF (liftF newF) x) = {!   !}
-    test (bindF (liftF (readF v)) x) = {! propagateL (bindF (liftF (readF v)) x)  !}
-    test (bindF (liftF (writeF x₁ x₂)) x) = {!   !}
-    test (bindF (liftF (returnF x₁)) x) = {!   !}
-    test (bindF (liftF (bindF m1 x₁)) x) = {!   !}
-    test (bindF (forkF m) x) = {!   !}
-    test (bindF (returnF x₁) x) = {!   !}
-    test (bindF (bindF m x₁) x) = {!   !}
+    -- open import AgdaAsciiPrelude.TrustMe
+    -- 
+    -- test : (m : stdForkThresholdVarMonadM T) -> runDefVarMonad (propagateL m) === runDefVarMonad (propagateL m)
+    -- test (liftF x) = {!   !}
+    -- test (forkF m) = {!   !}
+    -- test (returnF x) = {!   !}
+    -- test (bindF (liftF newF) x) = {!   !}
+    -- test (bindF (liftF (readF v)) f) with f (trustVal 10)
+    -- ... | liftF x = {!   !}
+    -- ... | forkF r = {!   !}
+    -- ... | returnF x = {!   !}
+    -- ... | bindF r x = {!   !}
+    -- test (bindF (liftF (writeF x₁ x₂)) x) = {!   !}
+    -- test (bindF (liftF (returnF x₁)) x) = {!   !}
+    -- test (bindF (liftF (bindF m1 x₁)) x) = {!   !}
+    -- test (bindF (forkF m) x) = {!   !}
+    -- test (bindF (returnF x₁) x) = {!   !}
+    -- test (bindF (bindF m x₁) x) = {!   !}
 
-    propagateN : MaybeT stdSpecMonad A -> MaybeT defaultVarMonadStateM A
-    propagateN = propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id
+    -- propagateN : MaybeT stdSpecMonad A -> MaybeT defaultVarMonadStateM A
+    -- propagateN = propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id
 
 runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
 runStdBranchingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r) --TODO! fix read executed before end of propagation!
