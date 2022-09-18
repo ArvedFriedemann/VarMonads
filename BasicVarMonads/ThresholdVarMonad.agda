@@ -165,13 +165,13 @@ open import Util.Monad
 
 module runFreeThresholdVarMonadPropagation
   {{mvm : ModifyVarMonad M V}}
-  {{mf : MonadFork M}}
+  -- {{mf : MonadFork M}}
   {{keq : K derives Eq}}
   {{kbmsl : K derives BoundedMeetSemilattice}}
   {{showv : forall {A} -> Show (V A)}}
   {{nk : K Nat}} where
   open BoundedMeetSemilattice {{...}}
-  open MonadFork mf hiding (mon)
+  --open MonadFork mf hiding (mon)
   open ModifyVarMonad mvm
 
   instance
@@ -210,7 +210,7 @@ module runFreeThresholdVarMonadPropagation
 
     runPropagators : List (M T) -> M T
     -- runPropagators (x :: []) = x --WARNING
-    runPropagators xs = (void o sequenceM o map fork) xs --WARNING
+    runPropagators = void o sequenceM -- o map fork--WARNING
 
     propagatorWrite : TVar K' V A -> A -> M T
     propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
