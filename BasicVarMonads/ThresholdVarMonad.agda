@@ -246,7 +246,7 @@ module runFreeThresholdVarMonadPropagation
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
   runFNCDtoVarProp cont' (left x) = cont' (trace "putting x into cont'" x) >>= return o maybe' (just o trace "cont' gave value") (trace "cont' failed" nothing)
   runFNCDtoVarProp cont' (right (D , (TVarC DT {{(OrigT , refl , k)}} (to <,> from) v) , cont)) = trace ("putting something to sleep on "++s show v) $
-      (to <$> read v) >>= maybe' (trace "doing the intended branch" $ runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (maybe' (\val -> trace "cont' had value" (return $ just val)) (trace "cont' had no value" $ return nothing))) (return nothing)
+      (to <$> read v) >>= maybe' (trace "doing the intended branch" $ runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (maybe' (\val -> trace "cont' had value" (return $ nothing {- just val -})) (trace "cont' had no value" $ return nothing))) (return nothing)
       -- (to <$> read v) >>= maybe' (runFNCDCont o cont >=> runFNCDtoVarProp cont') (return nothing)
       -- maybe' (\d -> runFNCDCont (cont d) >>= runFNCDtoVarProp cont') (return nothing) (to $ top {{kbmsl {{k}}}} , [])
       -- modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , (runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return tt)) ) :: props) }) >>= runPropagators >> return nothing
