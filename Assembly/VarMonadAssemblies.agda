@@ -254,7 +254,7 @@ runStdForkingVarMonad m r = runDefVarMonad $ (propagateL m) >>= maybe' (propagat
     propagateL m = propagateInterrupted runFNCD m
 
     -- open import AgdaAsciiPrelude.TrustMe
-    -- 
+    --
     -- test : (m : stdForkThresholdVarMonadM T) -> runDefVarMonad (propagateL m) === runDefVarMonad (propagateL m)
     -- test (liftF x) = {!   !}
     -- test (forkF m) = {!   !}

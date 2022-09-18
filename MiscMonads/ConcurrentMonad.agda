@@ -81,7 +81,7 @@ FMFTMonadTrans = record { liftT = liftF }
 
 module _
     {{mon : Monad M}}
-    {{ms : MonadState (ActList (FMFT M')) M}}
+    -- {{ms : MonadState (ActList (FMFT M')) M}}
     (liftM : forall {A B} -> M' A -> (A -> M B) -> M B) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
   -- instance
@@ -99,12 +99,6 @@ module _
   --                               in rm' , bindF m f
 
 
-  {-# TERMINATING #-}
-  runFMFT : (A -> M B) -> FMFT M' A -> M B
-  runFMFT cont (liftF m) = liftM m cont
-  runFMFT cont (forkF m) = (trace "forking!" $ modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
-  runFMFT cont (returnF x) = cont x --return x
-  runFMFT cont (bindF m f) = runFMFT ({-trace "fork-ping"-} (runFMFT cont o f)) m --WARNING: This gives a continuation that took the value from the failed computation!
 
   -- test : (m : FMFT M' A) -> runFMFT return m === {!   !}
   -- test (liftF x) = {!   !}
@@ -120,21 +114,30 @@ module _
 
   module _ (run : M T -> M T) where
 
-    flush : M T
-    flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
-
     {-# TERMINATING #-}
+    runFMFT : (A -> M B) -> FMFT M' A -> M B
+    runFMFT cont (liftF m) = liftM m cont
+    runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont --(modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
+    runFMFT cont (returnF x) = cont x --return x
+    runFMFT cont (bindF m f) = runFMFT ({-trace "fork-ping"-} (runFMFT cont o f)) m --WARNING: This gives a continuation that took the value from the failed computation!
+
+    -- flush : M T
+    -- flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
+
     propagate : FMFT M' A -> M A
-    propagate m = do
-        a <- runFMFT return m
-        propagate'
-        return a
-      where
-        propagate' : M T
-        propagate' = getS >>= \{
-            [] -> return tt ;
-            _  -> flush >> propagate'
-          }
+    propagate = runFMFT return
+    -- {-# TERMINATING #-}
+    -- propagate : FMFT M' A -> M A
+    -- propagate m = do
+    --     a <- runFMFT return m
+    --     propagate'
+    --     return a
+    --   where
+    --     propagate' : M T
+    --     propagate' = getS >>= \{
+    --         [] -> return tt ;
+    --         _  -> flush >> propagate'
+    --       }
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
@@ -166,14 +169,17 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   open MonadTrans {{...}}
 
   propagateInterrupted : (forall {A B} -> M' A -> (A -> MaybeT M B) -> MaybeT M B) -> FMFT M' A -> MaybeT M A
-  propagateInterrupted liftM fmft = _<$>_ {M = M} fst $ propagate
-    {M = MaybeT $ StateT (ActList (FMFT M')) M}
-    {{mon = MonadMaybeT {{MonadStateT}}}}
-    {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
-    (\m cont s -> liftM m (\a -> return $ just $ cont a s) >>= maybe' id (return (nothing , s)))
-    (\ m s -> m s >>= \{(_ , s') -> return (just tt , s')})
-    fmft
-    []
+  propagateInterrupted liftM fmft = propagate {{mon = MonadMaybeT}} liftM (\m -> m >>= maybe' (return o just) (return $ just tt)) fmft
+
+  -- propagateInterrupted : (forall {A B} -> M' A -> (A -> MaybeT M B) -> MaybeT M B) -> FMFT M' A -> MaybeT M A
+  -- propagateInterrupted liftM fmft = _<$>_ {M = M} fst $ propagate
+  --   {M = MaybeT $ StateT (ActList (FMFT M')) M}
+  --   {{mon = MonadMaybeT {{MonadStateT}}}}
+  --   {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
+  --   (\m cont s -> liftM m (\a -> return $ just $ cont a s) >>= maybe' id (return (nothing , s)))
+  --   (\ m s -> m s >>= \{(_ , s') -> return (just tt , s')})
+  --   fmft
+  --   []
 
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
@@ -188,7 +194,10 @@ module _ {M' : Set -> Set} {{mon : Monad M}} where
   open import AgdaAsciiPrelude.TrustMe
 
   propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
-  propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) id fmft []
+  propagateNormal liftM fmft = propagate (\m cont -> liftM m >>= cont) id fmft
+
+  -- propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
+  -- propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) id fmft []
     --(maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft
 
 -- FMFTMonadRun : MonadRun FMFT

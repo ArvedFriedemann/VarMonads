@@ -259,8 +259,8 @@ module runFreeThresholdVarMonadPropagation
       -- modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> (maybe' (\d -> runFNCDCont d >>= runFNCDtoVarProp cont') (trace "read failed on orig value" $ return nothing) $ cont <$> (to $ top {{kbmsl {{k}}}} , []))
       -- modify v (\{(x , props) -> propagatorModify {{k = k}} (trustVal 10) (trustVal 10 , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> return nothing
       -- newprop (trustVal 10) >> return nothing
-      {- trace "force running continuation" $-} cont' (trustVal 20) -- segfaults, even with tt: >> return (trustVal $ just 5)--\b -> trace ("resulting value is: " ++s maybe' (\b' -> const {B = T} "top" (trustVal b')) "nothing" b) (return b) -->> return (trustVal 15)
-      -- modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> return nothing
+      -- {- trace "force running continuation" $-} cont' (trustVal 20) -- segfaults, even with tt: >> return (trustVal $ just 5)--\b -> trace ("resulting value is: " ++s maybe' (\b' -> const {B = T} "top" (trustVal b')) "nothing" b) (return b) -->> return (trustVal 15)
+      modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> return nothing
     where
       -- TODO : Long story short: continuation is never executed and does not read its input value.
       -- possible solution: Probably the failed maybe thing is at it again.
