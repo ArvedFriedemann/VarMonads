@@ -99,12 +99,24 @@ module _
   --                               in rm' , bindF m f
 
 
-  {-# TERMINATING #-} --for the trace...apparently...
+  {-# TERMINATING #-}
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
   runFMFT cont (forkF m) = (trace "forking!" $ modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
   runFMFT cont (returnF x) = cont x --return x
   runFMFT cont (bindF m f) = runFMFT ({-trace "fork-ping"-} (runFMFT cont o f)) m --WARNING: This gives a continuation that took the value from the failed computation!
+
+  -- test : (m : FMFT M' A) -> runFMFT return m === {!   !}
+  -- test (liftF x) = {!   !}
+  -- test (forkF m) = {!   !}
+  -- test (returnF x) = {!   !}
+  -- test (bindF (liftF x) f) = {!   !}
+  -- test (bindF (forkF m) f) = {!   !}
+  -- test (bindF (returnF x) f) = {!   !}
+  -- test (bindF (bindF (liftF x) f2) f1) = {!   !}
+  -- test (bindF (bindF (forkF m) f2) f1) = {!   !}
+  -- test (bindF (bindF (returnF x) f2) f1) = {!   !}
+  -- test (bindF (bindF (bindF m x) f2) f1) = {!   !}
 
   module _ (run : M T -> M T) where
 

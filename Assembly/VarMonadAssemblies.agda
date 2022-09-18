@@ -67,6 +67,11 @@ instance
   stdKT = (record { _==_ = const $ const true }) ,
           (record { bsl = record { sl = record { _<>_ = const $ const tt } ; neut = tt } })
 
+  stdKNat : stdK Nat
+  stdKNat = eqNat , record { bsl = record {
+    sl = record { _<>_ = max } ;
+    neut = 0 } }
+
   {-}
   stdKTup : {{ka : stdK A}} -> {{kb : stdK B}} -> stdK (A -x- B)
   stdKTup {{ka}} {{kb}} = {!!}
@@ -246,6 +251,19 @@ runStdForkingVarMonad m r = runDefVarMonad $ propagateN (propagateL m) >>= maybe
 
     propagateL : forall {A} -> stdForkThresholdVarMonadM A -> MaybeT stdSpecMonad A
     propagateL m = propagateInterrupted runFNCD m
+
+    test : (m : stdForkThresholdVarMonadM T) -> propagateL m === {!!}
+    test (liftF x) = {!   !}
+    test (forkF m) = {!   !}
+    test (returnF x) = {!   !}
+    test (bindF (liftF newF) x) = {!   !}
+    test (bindF (liftF (readF v)) x) = {! propagateL (bindF (liftF (readF v)) x)  !}
+    test (bindF (liftF (writeF x₁ x₂)) x) = {!   !}
+    test (bindF (liftF (returnF x₁)) x) = {!   !}
+    test (bindF (liftF (bindF m1 x₁)) x) = {!   !}
+    test (bindF (forkF m) x) = {!   !}
+    test (bindF (returnF x₁) x) = {!   !}
+    test (bindF (bindF m x₁) x) = {!   !}
 
     propagateN : MaybeT stdSpecMonad A -> MaybeT defaultVarMonadStateM A
     propagateN = propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id
