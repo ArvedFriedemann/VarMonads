@@ -25,10 +25,10 @@ open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
 instance
   _ = mon
 
-  stdKNat : stdK Nat
-  stdKNat = eqNat , record { bsl = record {
-    sl = record { _<>_ = max } ;
-    neut = 0 } }
+  -- stdKNat : stdK Nat
+  -- stdKNat = eqNat , record { bsl = record {
+  --   sl = record { _<>_ = max } ;
+  --   neut = 0 } }
 
 
 testWrite : Maybe Nat
