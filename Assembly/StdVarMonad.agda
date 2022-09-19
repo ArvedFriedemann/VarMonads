@@ -5,7 +5,8 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import AgdaAsciiPrelude.Instances
 open import Data.Nat.Properties renaming (<-strictTotalOrder to NatSTO)
 open import BasicVarMonads.BaseVarMonad
-open import Debug.Trace
+open import Util.Monad
+--open import Debug.Trace
 
 open MonadState {{...}} using () renaming (get to getS; put to putS)
 
@@ -75,7 +76,7 @@ defaultVarMonad : BaseVarMonad defaultVarMonadStateM NatPtr
 defaultVarMonad = record {
     new = \ {A} x (n , mp) -> (ptr n) , (suc n , insert n (A , x) mp) ;
     read = \ { {A} p (n , mp) -> safeLookup p mp , (n , mp) } ;
-    write = \ {A} p v (n , mp) -> trace ("writing into v" ++s (showN $ idx p)) $ tt , n , (insert (idx p) (A , v) mp)
+    write = \ {A} p v (n , mp) -> tt , n , (insert (idx p) (A , v) mp)
   }
 
 open import BasicVarMonads.Constructions
@@ -91,3 +92,6 @@ defaultForkModifyVarMonad = liftModifyVarMonad {{mon' = FMFTMonad}} liftF defaul
 
 runDefVarMonad : defaultVarMonadStateM A -> A
 runDefVarMonad m = fst $ m defaultInit
+
+defaultMonadFork : MonadFork (defaultVarMonadStateM)
+defaultMonadFork = record { fork = void }

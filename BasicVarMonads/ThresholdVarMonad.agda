@@ -7,7 +7,7 @@ open import AgdaAsciiPrelude.Instances
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Derivation
 open import Util.Lattice
-open import Debug.Trace
+--open import Debug.Trace
 
 private
   variable
@@ -98,33 +98,10 @@ open import Debug.Trace
 
 ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
 ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
-    new = trace "running ThresholdVarMonadConstrDefVarMonad new" new ;
-    read = trace "running ThresholdVarMonadConstrDefVarMonad read" read ;
-    write = trace "running ThresholdVarMonadConstrDefVarMonad write" write }
+    new = new ;
+    read = read ;
+    write = write }
   where open ThresholdVarMonad tvm
-
--- module _ {{tvm : ThresholdVarMonad K M V}}
---           {{cvm : ConstrDefVarMonad K M V'}} where
---
---   open ThresholdVarMonad tvm renaming (new to newT; read to readT; write to writeT; cvm to cvmT)
---   open ConstrDefVarMonad cvm renaming (new to newC; read to readC; write to writeC)
---
---   private
---     variable
---       PContT : Set -> Set
---
---   --TODO : This constructions makes no sense, as it does not use the unterlying ConstrDefVarMonad!
---   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad :
---     (forall {A} -> (V' A) -> V (PContT A)) ->
---     (forall {A B} -> BijTFunc A B -> BijTFunc (PContT A) B) ->
---     ThresholdVarMonad K M (TVar K V')
---   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
---     retrieve bijTtrans = record {
---       cvm = record {
---         new = TVarC _ (just <,> id) <$> newC ;
---         read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
---         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
---       tvbf = TVarBijTFunctor }
 
 FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
 FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)
@@ -165,13 +142,13 @@ open import Util.Monad
 
 module runFreeThresholdVarMonadPropagation
   {{mvm : ModifyVarMonad M V}}
-  -- {{mf : MonadFork M}}
+  {{mf : MonadFork M}}
   {{keq : K derives Eq}}
   {{kbmsl : K derives BoundedMeetSemilattice}}
   {{showv : forall {A} -> Show (V A)}}
   {{nk : K Nat}} where
   open BoundedMeetSemilattice {{...}}
-  --open MonadFork mf hiding (mon)
+  open MonadFork mf hiding (mon)
   open ModifyVarMonad mvm
 
   instance
@@ -184,33 +161,18 @@ module runFreeThresholdVarMonadPropagation
   open import AgdaAsciiPrelude.TrustMe
 
   private
-    partitionList : List (A or B) -> List A -x- List B
-    partitionList [] = ([] , [])
-    partitionList ((left x) :: xs') with partitionList xs'
-    ... | (xs , ys) = (x :: xs  , ys)
-    partitionList ((right x) :: xs') with partitionList xs'
-    ... | (xs , ys) = (xs , x :: ys)
 
     propagatorModify : {{k : K A}} -> A -> PropPtrCont M A ->
       PropPtrCont M A -x- List (M T)
     propagatorModify x (x' , props) with
-      xm <- x /\ x' | partitionList $ map (\{(B , to , cont) ->
+      xm <- x /\ x' | partitionSumsWith (\{(B , to , cont) ->
                         maybe' (left o cont)
                                (right (B , to , cont))
-                               (to (trace ("putting value " ++s (showN $ trustVal xm) ++s "into props") xm))}) props
-      -- xm <- x /\ x' | partitionSumsWith (\{(B , to , cont) ->
-      --                   maybe' (left o cont)
-      --                          (right (B , to , cont))
-      --                          (to xm)}) props
-    --tried all those out. On write, there are no succeeding propagators in here.
-    -- ... | ([] , failed) = (x' , failed) , [] --WARNING
-    -- ... | (succd , []) = (x' , []) , succd --WARNING
-    -- ... | ([] , []) = (x' , []) , [] --WARNING
+                               (to xm)}) props
     ... | (succd , failed) = (xm , failed) , succd
 
     runPropagators : List (M T) -> M T
-    -- runPropagators (x :: []) = x --WARNING
-    runPropagators = void o sequenceM -- o map fork--WARNING
+    runPropagators = void o sequenceM o map fork
 
     propagatorWrite : TVar K' V A -> A -> M T
     propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
@@ -218,59 +180,42 @@ module runFreeThresholdVarMonadPropagation
 
   runFNCDCont : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
   --notice how we write an empty propagator list back. This is not a problem because we ignore that during the write!
-  runFNCDCont newF = {- trace "runFNCDCont newF" $ -}(left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
-  runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) = {- trace "runFNCDCont readF" $ -}
-    (maybe' (\x -> {- trace ("read value: " ++s (showN $ trustVal x))-} (left x) ) (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
+  runFNCDCont newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
+  runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
+    (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
     <$> read OVar
-    -- return $ right (_ , (TVarC OrigT (to <,> from) OVar) , returnF)
-  runFNCDCont (writeF v x) = {- trace ("runFNCDCont writeF " ++s show v ++s " " ++s showN (trustVal x)) $-} left <$> propagatorWrite v x
-  runFNCDCont (returnF x) = {- trace "runFNCDCont returnF" $ -} left <$> return x
-  runFNCDCont (bindF m f) = {- trace "runFNCDCont bindF" $ -} runFNCDCont m >>= \{
+  runFNCDCont (writeF v x) = left <$> propagatorWrite v x
+  runFNCDCont (returnF x) = left <$> return x
+  runFNCDCont (bindF m f) = runFNCDCont m >>= \{
       (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
-  shallowInspectFNCD : FNCDVarMon K (TVar K' V) A -> (Maybe A -x- String)
-  shallowInspectFNCD newF = nothing , "newF"
-  shallowInspectFNCD (readF v) = nothing , "readF " ++s show v
-  shallowInspectFNCD (writeF v x) = just tt , "writeF " ++s show v ++s " " ++s (showN $ trustVal x)
-  shallowInspectFNCD (returnF x) = just x , "ret"
-  shallowInspectFNCD (bindF m f) = let
-      (rm , sm) = shallowInspectFNCD m
-      (rm' , sm') = maybe' (shallowInspectFNCD o f) (nothing , " f") rm
-    in rm' , (if (_==_ {{r = eqNat}} (lengthString sm) 3)
-              then sm'
-              else ("bindF (" ++s sm ++s ") (" ++s sm' ++s ")"))
-
-  inspectFNCD : FNCDVarMon K (TVar K' V) A -> String
-  inspectFNCD = snd o shallowInspectFNCD
+  -- shallowInspectFNCD : FNCDVarMon K (TVar K' V) A -> (Maybe A -x- String)
+  -- shallowInspectFNCD newF = nothing , "newF"
+  -- shallowInspectFNCD (readF v) = nothing , "readF " ++s show v
+  -- shallowInspectFNCD (writeF v x) = just tt , "writeF " ++s show v ++s " " ++s (showN $ trustVal x)
+  -- shallowInspectFNCD (returnF x) = just x , "ret"
+  -- shallowInspectFNCD (bindF m f) = let
+  --     (rm , sm) = shallowInspectFNCD m
+  --     (rm' , sm') = maybe' (shallowInspectFNCD o f) (nothing , " f") rm
+  --   in rm' , (if (_==_ {{r = eqNat}} (lengthString sm) 3)
+  --             then sm'
+  --             else ("bindF (" ++s sm ++s ") (" ++s sm' ++s ")"))
+  --
+  -- inspectFNCD : FNCDVarMon K (TVar K' V) A -> String
+  -- inspectFNCD = snd o shallowInspectFNCD
 
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
-  runFNCDtoVarProp cont' (left x) = cont' (trace "putting x into cont'" x) >>= return o maybe' (just o trace "cont' gave value") (trace "cont' failed" nothing)
-  runFNCDtoVarProp cont' (right (D , (TVarC DT {{(OrigT , refl , k)}} (to <,> from) v) , cont)) = trace ("putting something to sleep on "++s show v) $
-      -- (to <$> read v) >>= maybe' (trace "doing the intended branch" $ runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (maybe' (\val -> trace "cont' had value" (return $ nothing {- just val -})) (trace "cont' had no value" $ return nothing))) (return nothing)
-      -- (to <$> read v) >>= maybe' (runFNCDCont o cont >=> runFNCDtoVarProp cont') (return nothing)
-      -- (to <$> read v) >>= maybe' (runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return nothing)) (return nothing)
-      -- maybe' (\d -> runFNCDCont (cont d) >>= runFNCDtoVarProp cont') (return nothing) (to $ trustVal (10 /\ 0){- top {{kbmsl {{k}}}} -}, []) -- NOTE works
-      -- modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , (runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return tt)) ) :: props) }) >>= runPropagators >> return nothing
-      -- (to <$> read v) >>= maybe' (\x -> runPropagators ((snd $ propagatorModify {{k = k}} (top {{kbmsl {{k}}}}) (top {{kbmsl {{k}}}} , (_ , to o (_, []) , (runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return tt)) ) :: []))) >> return nothing) (return nothing)
-      -- maybe' (\x -> runPropagators ((snd $ propagatorModify {{k = k}} (trustVal 10) (trustVal 10 , (_ , (const $ just x) , (runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> (const $ return tt)) ) :: []))) >> return nothing) (return nothing) (to (trustVal 10 , []))
-      -- modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> (maybe' (\d -> runFNCDCont d >>= runFNCDtoVarProp cont') (trace "read failed on orig value" $ return nothing) $ cont <$> (to $ top {{kbmsl {{k}}}} , []))
-      -- modify v (\{(x , props) -> propagatorModify {{k = k}} (trustVal 10) (trustVal 10 , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> return nothing
-      -- newprop (trustVal 10) >> return nothing
-      -- {- trace "force running continuation" $-} cont' (trustVal 20) -- segfaults, even with tt: >> return (trustVal $ just 5)--\b -> trace ("resulting value is: " ++s maybe' (\b' -> const {B = T} "top" (trustVal b')) "nothing" b) (return b) -->> return (trustVal 15)
-      modify v (\{(x , props) -> propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) }) >>= runPropagators >> return nothing
+  runFNCDtoVarProp cont' (left x) = cont' x
+  runFNCDtoVarProp cont' (right (D , (TVarC DT {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+      modify v (\{(x , props) ->
+        propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) })
+        >>= runPropagators >> return nothing
     where
-      -- TODO : Long story short: continuation is never executed and does not read its input value.
-      -- possible solution: Probably the failed maybe thing is at it again.
       newprop : D -> M T
-      newprop = trace "starting continuation" return
-                >=> runFNCDCont o (\x -> trace " created in frozen cont" $ trace (inspectFNCD x) x) o cont
-                -- >=> (\{(left x) -> trace "running continuation directly" (cont' x) ; (right c) -> trace "right case here should never happen!" (return nothing)})
-                >=> runFNCDtoVarProp cont' --(cont' o (trace "running cont' after freeze"))) -- o (\{(left x) -> trace "receiving (left x)" (left x) ; (right c) -> trace "receiving (right c)" (right c)})
-                -- >=> (\r -> trace "bogo modify" (modify v \{(_ , props) -> ((top {{kbmsl {{k}}}} , props) , tt)} )  >> return r)
-                >=> maybe' (const $ trace "returned just after continuation" $ return tt) (trace "returned nothing after continuation" $ return tt)
+      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> const (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
   runFNCD m cont = runFNCDCont ({-trace "runFNCD on " $ trace (inspectFNCD m)-} m) >>= runFNCDtoVarProp cont

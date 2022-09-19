@@ -6,7 +6,7 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import AgdaAsciiPrelude.Instances
 open import Util.Monad
 open import Category.Monad.State renaming (RawMonadState to MonadState)
-open import Debug.Trace
+--open import Debug.Trace
 
 private
   variable
@@ -79,47 +79,21 @@ module _ where
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
 
+-- {{ms : MonadState (ActList (FMFT M')) M}}
 module _
     {{mon : Monad M}}
-    -- {{ms : MonadState (ActList (FMFT M')) M}}
     (liftM : forall {A B} -> M' A -> (A -> M B) -> M B) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
-  -- instance
-  --   _ = MonadStateStateT
-  --   _ = MonadStateT
-  --   _ = MonadTransStateT
 
-  -- pingIfNotReturn : FMFT M' A -> Maybe A -x- FMFT M' A
-  -- pingIfNotReturn (liftF x) = nothing , (trace "ping liftF" $ liftF x)
-  -- pingIfNotReturn (forkF m) = just tt , (trace "ping forkF" $ forkF m)
-  -- pingIfNotReturn (returnF x) = just x , returnF x
-  -- pingIfNotReturn (bindF m f) = let
-  --                                 (rm , fmft) = pingIfNotReturn m
-  --                                 (rm' , fmftf) = maybe' (pingIfNotReturn o f) (nothing , returnF tt) rm
-  --                               in rm' , bindF m f
-
-
-
-  -- test : (m : FMFT M' A) -> runFMFT return m === {!   !}
-  -- test (liftF x) = {!   !}
-  -- test (forkF m) = {!   !}
-  -- test (returnF x) = {!   !}
-  -- test (bindF (liftF x) f) = {!   !}
-  -- test (bindF (forkF m) f) = {!   !}
-  -- test (bindF (returnF x) f) = {!   !}
-  -- test (bindF (bindF (liftF x) f2) f1) = {!   !}
-  -- test (bindF (bindF (forkF m) f2) f1) = {!   !}
-  -- test (bindF (bindF (returnF x) f2) f1) = {!   !}
-  -- test (bindF (bindF (bindF m x) f2) f1) = {!   !}
 
   module _ (run : M T -> M T) where
 
     {-# TERMINATING #-}
     runFMFT : (A -> M B) -> FMFT M' A -> M B
     runFMFT cont (liftF m) = liftM m cont
-    runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont --(modifyS (void {{mon = FMFTMonad}} m ::_)) >>= cont
-    runFMFT cont (returnF x) = cont x --return x
-    runFMFT cont (bindF m f) = runFMFT ({-trace "fork-ping"-} (runFMFT cont o f)) m --WARNING: This gives a continuation that took the value from the failed computation!
+    runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont
+    runFMFT cont (returnF x) = cont x
+    runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
     -- flush : M T
     -- flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
@@ -141,30 +115,10 @@ module _
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
-  -- open import AgdaAsciiPrelude.Instances
-  --
-  -- module _ where
-  --
-  --   instance
-  --     _ = MonadMaybeT {{MonadStateTId {S = Nat}}}
-  --     --_ = MonadStateTId
-  --
-  --     mst : MonadState Nat (MaybeT (StateT Nat id))
-  --     mst = MonadStateTFromTrans {{monT = MonadMaybeT {{MonadStateTId}} }} {{mon = MonadStateTId}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateTId }}
-  --
-  --   --open MonadState mst using () renaming (put to putS)
-  --
-  --   test' : MaybeT (StateT Nat id) T
-  --   test' = return 4 >>= const (return {{r = MonadStateTId}} nothing) >> put 10
-  --
-  -- test : test' 5 === (nothing , 5)
-  -- test = refl
-
   instance
     _ = MonadStateStateT
     _ = MonadStateT
     _ = MonadTransStateT
-    -- _ = MonadMaybeT
 
   open MonadTrans {{...}}
 

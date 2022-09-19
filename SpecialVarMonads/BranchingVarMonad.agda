@@ -180,18 +180,12 @@ module ConnectionOperations
   getParent (SVarC lst v) = do
     (c? , (SVarC lstpar vpar)) <- getParentAndCreated? (SVarC lst v)
     when c? (fork $ vpar =p> v)
-    -- when c? (fork $ v =p> vpar)
     return (SVarC lstpar vpar)
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
     (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
     when c? (fork $ v =p> vc)
-    -- v =p> vc
-    -- fork $ read (eqThreshold (top , empty , nothing) <bt$> v) >>= write vc --doesn't work with fork...
-    -- fork $ read v >>= write vc --doesn't work with fork...
-    -- read v >>= write vc
-    -- when c? (fork $ vc =p> v)
     return (SVarC lstpar vc)
 
 
