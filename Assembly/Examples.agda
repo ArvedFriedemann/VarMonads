@@ -19,6 +19,9 @@ open BranchingVarMonad stdBranchingVarMonad
 open MonadReader _ (BranchingVarMonad.mr stdBranchingVarMonad) using (reader; local)
 open MonadFork stdMonadFork hiding (mon)
 
+instance
+  _ = FMFTMonadFork
+
 open import SpecialVarMonads.Propagators.BasicPropagators
 open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
 
@@ -67,8 +70,8 @@ testEqProp = flip runStdBranchingVarMonad read do
   v <- new
   v' <- new
   v'' <- new
-  fork $ v' =p> v
-  fork $ v'' =p> v'
+  v' =p> v      --directional propagators are automatically forked
+  v'' =p> v'    --directional propagators are automatically forked
   fork $ write v'' 10
   return v
 
