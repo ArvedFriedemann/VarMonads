@@ -82,36 +82,34 @@ FMFTMonadTrans = record { liftT = liftF }
 -- {{ms : MonadState (ActList (FMFT M')) M}}
 module _
     {{mon : Monad M}}
-    (liftM : forall {A B} -> M' A -> (A -> M B) -> M B) where
+    (liftM : forall {A B} -> M' A -> (A -> M B) -> M B)
+    (run : M T -> M T) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
 
+  {-# TERMINATING #-}
+  runFMFT : (A -> M B) -> FMFT M' A -> M B
+  runFMFT cont (liftF m) = liftM m cont
+  runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont
+  runFMFT cont (returnF x) = cont x
+  runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
-  module _ (run : M T -> M T) where
+  -- flush : M T
+  -- flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
 
-    {-# TERMINATING #-}
-    runFMFT : (A -> M B) -> FMFT M' A -> M B
-    runFMFT cont (liftF m) = liftM m cont
-    runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont
-    runFMFT cont (returnF x) = cont x
-    runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
-
-    -- flush : M T
-    -- flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
-
-    propagate : FMFT M' A -> M A
-    propagate = runFMFT return
-    -- {-# TERMINATING #-}
-    -- propagate : FMFT M' A -> M A
-    -- propagate m = do
-    --     a <- runFMFT return m
-    --     propagate'
-    --     return a
-    --   where
-    --     propagate' : M T
-    --     propagate' = getS >>= \{
-    --         [] -> return tt ;
-    --         _  -> flush >> propagate'
-    --       }
+  propagate : FMFT M' A -> M A
+  propagate = runFMFT return
+  -- {-# TERMINATING #-}
+  -- propagate : FMFT M' A -> M A
+  -- propagate m = do
+  --     a <- runFMFT return m
+  --     propagate'
+  --     return a
+  --   where
+  --     propagate' : M T
+  --     propagate' = getS >>= \{
+  --         [] -> return tt ;
+  --         _  -> flush >> propagate'
+  --       }
 
 module _ {M' : Set -> Set} {{mon : Monad M}} where
 
