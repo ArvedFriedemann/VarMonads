@@ -7,6 +7,7 @@ open import AgdaAsciiPrelude.Instances
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Derivation
 open import Util.Lattice
+--open import Debug.Trace
 
 private
   variable
@@ -93,35 +94,14 @@ FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
 
+open import Debug.Trace
+
 ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
 ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
     new = new ;
     read = read ;
     write = write }
   where open ThresholdVarMonad tvm
-
--- module _ {{tvm : ThresholdVarMonad K M V}}
---           {{cvm : ConstrDefVarMonad K M V'}} where
---
---   open ThresholdVarMonad tvm renaming (new to newT; read to readT; write to writeT; cvm to cvmT)
---   open ConstrDefVarMonad cvm renaming (new to newC; read to readC; write to writeC)
---
---   private
---     variable
---       PContT : Set -> Set
---
---   --TODO : This constructions makes no sense, as it does not use the unterlying ConstrDefVarMonad!
---   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad :
---     (forall {A} -> (V' A) -> V (PContT A)) ->
---     (forall {A B} -> BijTFunc A B -> BijTFunc (PContT A) B) ->
---     ThresholdVarMonad K M (TVar K V')
---   ThresholdVarMonad=>ConstrDefVarMonad=>ThresholdVarMonad
---     retrieve bijTtrans = record {
---       cvm = record {
---         new = TVarC _ (just <,> id) <$> newC ;
---         read = \{(TVarC _ f v) -> readT (bijTtrans f <bt$> retrieve v)} ;
---         write = \{(TVarC _ f v) -> writeT (bijTtrans f <bt$> retrieve v)} } ;
---       tvbf = TVarBijTFunctor }
 
 FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
 FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)
@@ -164,15 +144,24 @@ module runFreeThresholdVarMonadPropagation
   {{mvm : ModifyVarMonad M V}}
   {{mf : MonadFork M}}
   {{keq : K derives Eq}}
-  {{kbmsl : K derives BoundedMeetSemilattice}} where
+  {{kbmsl : K derives BoundedMeetSemilattice}}
+  {{showv : forall {A} -> Show (V A)}}
+  {{nk : K Nat}} where
   open BoundedMeetSemilattice {{...}}
-  open MonadFork mf
+  open MonadFork mf hiding (mon)
   open ModifyVarMonad mvm
+
+  instance
+    _ : forall {A V K} -> {{forall {B} -> Show (V B)}} -> Show (TVar K V A)
+    _ = record { show = \{ (TVarC OrigT f OVar) -> "TVar#" ++s show OVar} }
 
   K' : Set -> Set
   K' = SpecK K M
 
+  open import AgdaAsciiPrelude.TrustMe
+
   private
+
     propagatorModify : {{k : K A}} -> A -> PropPtrCont M A ->
       PropPtrCont M A -x- List (M T)
     propagatorModify x (x' , props) with
@@ -202,16 +191,31 @@ module runFreeThresholdVarMonadPropagation
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
-  {-# TERMINATING #-}
-  runFNCDtoVarProp : A or (FNCDCont K (TVar K' V) A) -> M T
-  runFNCDtoVarProp (left x) = return tt
-  runFNCDtoVarProp (right (_ , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
-    modify v (\{(x , props) -> propagatorModify {{k = k}} x (x ,
-      (_ , to o (_, []) , newprop) :: props) }) >>= runPropagators
-    where newprop = runFNCDCont o cont >=> runFNCDtoVarProp
+  -- shallowInspectFNCD : FNCDVarMon K (TVar K' V) A -> (Maybe A -x- String)
+  -- shallowInspectFNCD newF = nothing , "newF"
+  -- shallowInspectFNCD (readF v) = nothing , "readF " ++s show v
+  -- shallowInspectFNCD (writeF v x) = just tt , "writeF " ++s show v ++s " " ++s (showN $ trustVal x)
+  -- shallowInspectFNCD (returnF x) = just x , "ret"
+  -- shallowInspectFNCD (bindF m f) = let
+  --     (rm , sm) = shallowInspectFNCD m
+  --     (rm' , sm') = maybe' (shallowInspectFNCD o f) (nothing , " f") rm
+  --   in rm' , (if (_==_ {{r = eqNat}} (lengthString sm) 3)
+  --             then sm'
+  --             else ("bindF (" ++s sm ++s ") (" ++s sm' ++s ")"))
+  --
+  -- inspectFNCD : FNCDVarMon K (TVar K' V) A -> String
+  -- inspectFNCD = snd o shallowInspectFNCD
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> M (Maybe A)
-  runFNCD m = do
-    AorCont <- runFNCDCont m
-    runFNCDtoVarProp AorCont
-    return $ maybeLeft AorCont
+  {-# TERMINATING #-}
+  runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
+  runFNCDtoVarProp cont' (left x) = cont' x
+  runFNCDtoVarProp cont' (right (D , (TVarC DT {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+      modify v (\{(x , props) ->
+        propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) })
+        >>= runPropagators >> return nothing
+    where
+      newprop : D -> M T
+      newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> const (return tt)
+
+  runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
+  runFNCD m cont = runFNCDCont ({-trace "runFNCD on " $ trace (inspectFNCD m)-} m) >>= runFNCDtoVarProp cont

@@ -48,6 +48,20 @@ module BaseVarMonadConstructions where
 
 open BaseVarMonadConstructions public
 
+module _ where
+  open BoundedMeetSemilattice {{...}}
+  open BaseVarMonad {{...}}
+
+  BaseVarMonad=>ConstrDefVarMonad :
+    {{bvm : BaseVarMonad M V}} ->
+    {{K derives BoundedMeetSemilattice}} ->
+    ConstrDefVarMonad K M V
+  BaseVarMonad=>ConstrDefVarMonad = record {
+    new = new top ;
+    read = read ;
+    write = write }
+
+
 module LatticeVarMonadConstructions where
   open import BasicVarMonads.LatticeVarMonad
   open ConstrVarMonad {{...}}

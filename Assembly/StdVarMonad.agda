@@ -5,6 +5,8 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import AgdaAsciiPrelude.Instances
 open import Data.Nat.Properties renaming (<-strictTotalOrder to NatSTO)
 open import BasicVarMonads.BaseVarMonad
+open import Util.Monad
+--open import Debug.Trace
 
 open MonadState {{...}} using () renaming (get to getS; put to putS)
 
@@ -24,6 +26,10 @@ record NatPtr (A : Set) : Set where
     idx : Nat
 
 open NatPtr public
+
+instance
+  showNatPtr : Show (NatPtr A)
+  showNatPtr = record { show = ("v" ++s_) o show o idx }
 
 STONatPtr : StrictTotalOrder _ _ _
 STONatPtr = record {
@@ -86,3 +92,6 @@ defaultForkModifyVarMonad = liftModifyVarMonad {{mon' = FMFTMonad}} liftF defaul
 
 runDefVarMonad : defaultVarMonadStateM A -> A
 runDefVarMonad m = fst $ m defaultInit
+
+defaultMonadFork : MonadFork (defaultVarMonadStateM)
+defaultMonadFork = record { fork = void }

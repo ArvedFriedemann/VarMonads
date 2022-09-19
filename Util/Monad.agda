@@ -40,6 +40,19 @@ record MonadRun (MT : (Set -> Set) -> Set -> Set) : Set where
     overlap {{mt}} : MonadTrans MT
 
 
+
+MaybeT : (Set -> Set) -> Set -> Set
+MaybeT M A = M (Maybe A)
+
+MonadMaybeT : {{mon : Monad M}} -> Monad (MaybeT M)
+MonadMaybeT = record {
+  return = return o just ;
+  _>>=_ = \m mf -> m >>= maybe' mf (return nothing) }
+
+MonadTransMaybeT : MonadTrans MaybeT
+MonadTransMaybeT = record { liftT = just <$>_ }
+
+
 MonadStateTFromTrans : {{monT : Monad (MT M)}} {{mon : Monad M}} {{mt : MonadTrans MT}} {{ms : MonadState S M}} -> MonadState S (MT M)
 MonadStateTFromTrans {{monT}} {{mon}} {{mt}} {{ms}} = record {
   monad = it ;
@@ -89,3 +102,9 @@ MonadReaderFromRun = record {
   monad = it ;
   reader = liftT o reader ;
   local = \f -> liftT o local f o run }
+
+-- Is in AsciiPrelude
+-- MonadId : Monad id
+-- MonadId = record {
+--   return = id ;
+--   _>>=_ = \a f -> f a }

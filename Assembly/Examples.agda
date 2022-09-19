@@ -8,6 +8,7 @@ open import SpecialVarMonads.BranchingVarMonad
 open import Util.Lattice
 open import MiscMonads.ConcurrentMonad
 open import BasicVarMonads.ThresholdVarMonad
+--open import Debug.Trace
 
 private
   variable
@@ -24,14 +25,9 @@ open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
 instance
   _ = mon
 
-  stdKNat : stdK Nat
-  stdKNat = eqNat , record { bsl = record {
-    sl = record { _<>_ = max } ;
-    neut = 0 } }
-
 
 testWrite : Maybe Nat
-testWrite = flip runStdForkingVarMonad read do
+testWrite = flip runStdBranchingVarMonad read do
   v <- new
   write v 10
   return v
@@ -40,58 +36,55 @@ testWriteResult : testWrite === just 10
 testWriteResult = refl
 
 testRead : Maybe Nat
-testRead = flip runStdForkingVarMonad read do
+testRead = flip runStdBranchingVarMonad read do
   v <- new
   write v 10
-  read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+  read (eqThreshold 0 <bt$> v)
   write v 20
   return v
 
 testReadResult : testRead === just 20
 testReadResult = refl
 
+
+
 testFork : Maybe Nat
-testFork = flip runStdForkingVarMonad read do
-  v <- new
+testFork = flip runStdBranchingVarMonad read do
+  v <- new {A = Nat}
+  fork $ write v 10
   fork $ do
-    read (((\x -> whenMaybe (x == 10) tt) <,> const 10) <bt$> v)
+    read (eqThreshold 0 <bt$> v)
     write v 20
-  write v 10
   return v
 
 testForkResult : testFork === just 20
 testForkResult = refl
 
+
+
 testEqProp : Maybe Nat
-testEqProp = flip runStdForkingVarMonad read do
+testEqProp = flip runStdBranchingVarMonad read do
   v <- new
   v' <- new
   v'' <- new
   fork $ v' =p> v
-  fork $ v'' =p> v
-  write v'' 10
+  fork $ v'' =p> v'
+  fork $ write v'' 10
   return v
 
 testEqPropResult : testEqProp === just 10
 testEqPropResult = refl
 
+
+
 testBranch : Maybe Nat
-testBranch = flip runStdForkingVarMonad read do
+testBranch = flip runStdBranchingVarMonad read do
   v <- new
-  -- write v 10
+  write v 10
   branched \push -> fork $ do
-    -- l <- reader length
-    -- write v (l + 100)
-    -- fork $ write v 20 --stops working with fork!
+    write v 20
     read (eqThreshold 0 <bt$> v)
     push (write v 15)
-  --   v' <- new
-  --   fork $ do
-  --     read (eqThreshold 0 <bt$> v')
-  --     push (write v 15)
-  --   return v'
-  -- write v' 10
-  write v 10
   return v
 
 testBranchResult : testBranch === just 15

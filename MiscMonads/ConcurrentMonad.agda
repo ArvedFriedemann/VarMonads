@@ -6,6 +6,7 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import AgdaAsciiPrelude.Instances
 open import Util.Monad
 open import Category.Monad.State renaming (RawMonadState to MonadState)
+--open import Debug.Trace
 
 private
   variable
@@ -56,7 +57,7 @@ data FMFT (M : Set -> Set) : Set -> Set where
   returnF : A -> FMFT M A
   bindF : FMFT M A -> (A -> FMFT M B) -> FMFT M B
 
-FMFTMonadFork : {{mon : Monad M}} -> MonadFork (FMFT M)
+FMFTMonadFork : MonadFork (FMFT M)
 FMFTMonadFork = record {
     fork = forkF ;
     mon = record { return = returnF ; _>>=_ = bindF }
@@ -78,43 +79,80 @@ module _ where
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
 
+-- {{ms : MonadState (ActList (FMFT M')) M}}
 module _
     {{mon : Monad M}}
-    {{ms : MonadState (ActList (FMFT M')) M}}
-    (liftT : forall {A} -> M' A -> M A) where
+    (liftM : forall {A B} -> M' A -> (A -> M B) -> M B) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
-  -- instance
-  --   _ = MonadStateStateT
-  --   _ = MonadStateT
-  --   _ = MonadTransStateT
 
-  runFMFT : FMFT M' A -> M A
-  runFMFT (liftF m) = liftT m
-  runFMFT (forkF m) = modifyS (void {{mon = FMFTMonad}} m ::_)
-  runFMFT (returnF x) = return x
-  runFMFT (bindF m f) = runFMFT m >>= runFMFT o f
 
   module _ (run : M T -> M T) where
 
-    flush : M T
-    flush = get >>= \s -> put [] >> (void $ sequenceM (map (run o runFMFT) s))
-
-    -- boundedProp : {{mon : Monad M}} -> Nat -> FMFT M A -> M (ActList (FMFT M))
-    -- boundedProp n m = (snd <$> runFMFT m) >>= iterateM n flush
-
     {-# TERMINATING #-}
-    propagate : FMFT M' A -> M A
-    propagate m = do
-        a <- runFMFT m
-        propagate'
-        return a
-      where
-        propagate' : M T
-        propagate' = getS >>= \{
-            [] -> return tt ;
-            _  -> flush >> propagate'
-          }
+    runFMFT : (A -> M B) -> FMFT M' A -> M B
+    runFMFT cont (liftF m) = liftM m cont
+    runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont
+    runFMFT cont (returnF x) = cont x
+    runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 
+    -- flush : M T
+    -- flush = getS >>= \s -> putS [] >> (void $ sequenceM (map (run o runFMFT (trace "reached last return of fork continuation" return) o (trace "running fork")) s))
+
+    propagate : FMFT M' A -> M A
+    propagate = runFMFT return
+    -- {-# TERMINATING #-}
+    -- propagate : FMFT M' A -> M A
+    -- propagate m = do
+    --     a <- runFMFT return m
+    --     propagate'
+    --     return a
+    --   where
+    --     propagate' : M T
+    --     propagate' = getS >>= \{
+    --         [] -> return tt ;
+    --         _  -> flush >> propagate'
+    --       }
+
+module _ {M' : Set -> Set} {{mon : Monad M}} where
+
+  instance
+    _ = MonadStateStateT
+    _ = MonadStateT
+    _ = MonadTransStateT
+
+  open MonadTrans {{...}}
+
+  propagateInterrupted : (forall {A B} -> M' A -> (A -> MaybeT M B) -> MaybeT M B) -> FMFT M' A -> MaybeT M A
+  propagateInterrupted liftM fmft = propagate {{mon = MonadMaybeT}} liftM (\m -> m >>= maybe' (return o just) (return $ just tt)) fmft
+
+  -- propagateInterrupted : (forall {A B} -> M' A -> (A -> MaybeT M B) -> MaybeT M B) -> FMFT M' A -> MaybeT M A
+  -- propagateInterrupted liftM fmft = _<$>_ {M = M} fst $ propagate
+  --   {M = MaybeT $ StateT (ActList (FMFT M')) M}
+  --   {{mon = MonadMaybeT {{MonadStateT}}}}
+  --   {{ms = MonadStateTFromTrans {{monT = MonadMaybeT }} {{mon = MonadStateT}} {{mt = MonadTransMaybeT }} {{ms = MonadStateStateT }} }}
+  --   (\m cont s -> liftM m (\a -> return $ just $ cont a s) >>= maybe' id (return (nothing , s)))
+  --   (\ m s -> m s >>= \{(_ , s') -> return (just tt , s')})
+  --   fmft
+  --   []
+
+
+module _ {M' : Set -> Set} {{mon : Monad M}} where
+
+  instance
+    _ = MonadStateT
+    _ = MonadStateStateT
+    _ = MonadTransStateT
+
+  open MonadTrans {{...}}
+
+  open import AgdaAsciiPrelude.TrustMe
+
+  propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
+  propagateNormal liftM fmft = propagate (\m cont -> liftM m >>= cont) id fmft
+
+  -- propagateNormal : (forall {A} -> M' A -> M A) -> FMFT M' A -> M A
+  -- propagateNormal liftM fmft = fst <$> propagate (\m cont s -> liftM m >>= flip cont s) id fmft []
+    --(maybe' id (trustVal tt) ) <$> propagateInterrupted (\m -> just <$> liftM m) fmft
 
 -- FMFTMonadRun : MonadRun FMFT
 -- FMFTMonadRun = record { run = propagate }
