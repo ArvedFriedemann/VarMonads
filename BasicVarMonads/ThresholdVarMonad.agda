@@ -218,4 +218,4 @@ module runFreeThresholdVarMonadPropagation
       newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> const (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
-  runFNCD m cont = runFNCDCont m) >>= runFNCDtoVarProp cont
+  runFNCD m cont = runFNCDCont m >>= runFNCDtoVarProp cont
