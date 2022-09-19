@@ -209,7 +209,7 @@ module runFreeThresholdVarMonadPropagation
   {-# TERMINATING #-}
   runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
   runFNCDtoVarProp cont' (left x) = cont' x
-  runFNCDtoVarProp cont' (right (D , (TVarC DT {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
+  runFNCDtoVarProp cont' (right (D , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
       modify v (\{(x , props) ->
         propagatorModify {{k = k}} x (x , (_ , to o (_, []) , newprop ) :: props) })
         >>= runPropagators >> return nothing
@@ -218,4 +218,4 @@ module runFreeThresholdVarMonadPropagation
       newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> const (return tt)
 
   runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
-  runFNCD m cont = runFNCDCont ({-trace "runFNCD on " $ trace (inspectFNCD m)-} m) >>= runFNCDtoVarProp cont
+  runFNCD m cont = runFNCDCont m) >>= runFNCDtoVarProp cont
