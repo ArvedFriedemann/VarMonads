@@ -17,7 +17,7 @@ private
 
 open BranchingVarMonad stdBranchingVarMonad
 open MonadReader _ (BranchingVarMonad.mr stdBranchingVarMonad) using (reader; local)
-open MonadFork stdMonadFork hiding (mon)
+open MonadFork stdBranchingVarMonadFork hiding (mon)
 
 instance
   _ = FMFTMonadFork
@@ -27,6 +27,7 @@ open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
 
 instance
   _ = mon
+  _ = stdBranchingVarMonadFork
 
 
 testWrite : Maybe Nat

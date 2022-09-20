@@ -182,6 +182,15 @@ module _ where
         {{cvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
         {{tvm = tvm}}
 
+  stdBranchingVarMonadFork : MonadFork (stdBranchingVarMonadM)
+  stdBranchingVarMonadFork = it
+
+runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
+runStdBranchingVarMonad m r = runReadoutPropagation (\m -> propagateSFTVM (m []) >>= return o (fst <$>_)) m r
+  where
+    instance
+      _ = BaseVarMonad.mon defaultVarMonad
+      _ = MonadMaybe
 
 -- runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
 -- runStdBranchingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r) --TODO! fix read executed before end of propagation!

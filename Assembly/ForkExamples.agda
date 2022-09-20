@@ -19,10 +19,11 @@ open ThresholdVarMonad stdForkThresholdVarMonad
 open MonadFork (FMFTMonadFork {M = stdForkThresholdSub}) hiding (mon)
 
 open import SpecialVarMonads.Propagators.BasicPropagators
-open EqTPropagators {{tvm = BranchingVarMonad.tvm stdBranchingVarMonad}}
+open EqTPropagators {{tvm = stdForkThresholdVarMonad}}
 
 instance
   _ = mon
+  _ = FMFTMonadFork
 
 testFork : Maybe Nat
 testFork = flip runStdForkingVarMonad read do
