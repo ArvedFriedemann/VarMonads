@@ -186,7 +186,7 @@ module _ where
   stdBranchingVarMonadFork = it
 
 runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdBranchingVarMonad m r = runReadoutPropagation (\m -> propagateSFTVM (m []) >>= return o (fst <$>_)) m r
+runStdBranchingVarMonad = runReadoutPropagation (\m -> propagateSFTVM (m []) >>= return o (fst <$>_))
   where
     instance
       _ = BaseVarMonad.mon defaultVarMonad
