@@ -64,6 +64,12 @@ FMFTMonadFork = record {
   }
 
 module _ where
+  open MonadFork {{...}}
+
+  MonadForkFromStateT : {{mf : MonadFork M}} -> {{mon : Monad (StateT S M)}} -> MonadFork (StateT S M)
+  MonadForkFromStateT = record { fork = \m s -> fork (m s) >> return (tt , s) }
+
+module _ where
   open MonadTrans {{...}}
   open MonadRun {{...}}
   open MonadFork {{...}}
