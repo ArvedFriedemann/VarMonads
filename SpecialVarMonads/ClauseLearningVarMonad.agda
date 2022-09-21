@@ -158,4 +158,4 @@ module _ {K : Set -> Set} {V : Set -> Set} where
           write = \{(TVarC OrigT {{skC _ refl}} (_ <,> from) v) x -> do
             asm <- get
             write v (fst (from x) , [ (fst (from x)) , asm ]) } } ;
-        tvbf = TVarBijTFunctor } --ThresholdVarMonad.tvbf tvm }
+        tvbf = TVarBijTFunctor }
