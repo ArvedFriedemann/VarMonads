@@ -123,7 +123,7 @@ record SpecKLPC (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
   inductive
   field
     oT : Set
-    eq : A === LatAsmPtrCont (TVar (SpecKLPC K V) V) oT
+    eq : A === LatAsmPtrCont (TVar (SpecKLPC K V) (TVar K V)) oT
     overlap {{kb}} : K oT
 
 --This assumes lattice property!
@@ -134,15 +134,15 @@ module _ {K : Set -> Set} {V : Set -> Set} where
   K' = SpecKLPC K V
   module ClauseLearningLattice
       {{tvm : ThresholdVarMonad K M (TVar K V)}}
-      {{kas : K derives (K o LatAsmPtrCont (TVar K' V))}}
+      {{kas : K derives (K o LatAsmPtrCont (TVar K' (TVar K V)))}}
       {{ms : MonadState (LatClause (TVar K' (TVar K V))) M }} where
 
       open ThresholdVarMonad tvm
       open MonadState ms hiding (_>>=_;_>>_;return;_<$>_) renaming (modify to modifyS)
 
-      ptrTrans : {{k : K A}} -> TVar K V (LatAsmPtrCont (TVar K' V) A) -> TVar K' (TVar K V) A
+      ptrTrans : {{k : K A}} -> TVar K V (LatAsmPtrCont (TVar K' (TVar K V)) A) -> TVar K' (TVar K V) A
       ptrTrans {A = A} (TVarC OrigT {{k}} f OVar) = TVarC
-        (LatAsmPtrCont (TVar K' V) A)
+        (LatAsmPtrCont (TVar K' (TVar K V)) A)
         {{ skC _ refl {{ it }} }}
         ((just o fst) <,> (_, [])) --assumes lattice property
         (f <bt$> (TVarC _ (just <,> id) OVar)) --has to be this way, because variable needs to be transformed
@@ -157,5 +157,5 @@ module _ {K : Set -> Set} {V : Set -> Set} where
             return x } ;
           write = \{(TVarC OrigT {{skC _ refl}} (_ <,> from) v) x -> do
             asm <- get
-            write v ({!  !} , {!!}) } } ;
+            write v (fst (from x) , [ (fst (from x)) , asm ]) } } ;
         tvbf = TVarBijTFunctor } --ThresholdVarMonad.tvbf tvm }
