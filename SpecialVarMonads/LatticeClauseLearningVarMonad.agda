@@ -54,6 +54,7 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
         ((just o fst) <,> (_, [])) --assumes lattice property
         (f <bt$> (TVarC _ (just <,> id) OVar)) --has to be this way, because variable needs to be transformed
 
+
       CLTVM : ThresholdVarMonad K M V
       CLTVM = record {
         cvm = record {
@@ -77,10 +78,18 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
         eqSig : {V : Set -> Set} -> {{PEq V}} -> Eq (Sigma Set V)
         eqSig = record { _==_ = \{(_ , v1) (_ , v2) -> v1 =p= v2 } }
 
-        -- {-# TERMINATING #-}
-        -- dfsFoldM :
-        --   (forall {A} -> A -> AsmPtr K V C -> List B -> B) ->
-        --   B ->
-        --   AsmPtr K V A ->
-        --   M B
-        -- dfsFoldM f def (AsmPtrC v) = {!!}
+        {-# TERMINATING #-}
+        dfsFoldM :
+          (forall {A} -> A -> LatAsmPtr V A -> List (List B) -> B) ->
+          B ->
+          LatAsmPtr V A ->
+          M B
+        dfsFoldM {B = B} {A = A} f def v = {!!}
+          where
+            dfsFoldM' : A -> LatAsmPtr V A -> StateT (List (Sigma Set V)) M B
+            dfsFoldM' x (TVarC OrigT {{skC t refl}} f v) visited
+              with ((_ , (TVarC OrigT {{skC t refl}} f v)) elem visited withEq eqSig)
+            ...| true = return (def , visited)
+            ...| false = do
+              (_ , asm) <- read v
+              {!!}
