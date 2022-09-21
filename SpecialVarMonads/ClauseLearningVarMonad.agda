@@ -101,3 +101,61 @@ module ClauseLearning
 
 -- TODO : Monad with state to track variables and put clauses on assigning variables
 -- eventually, real clause learning algorithm.
+
+
+open import BasicVarMonads.ThresholdVarMonad
+
+LatAssignment : (Set -> Set) -> Set
+LatAssignment V = Sigma Set \A -> A -x- V A
+
+LatClause : (Set -> Set) -> Set
+LatClause V = List (LatAssignment V)
+
+LatAsmPtrCont : (Set -> Set) -> Set -> Set
+LatAsmPtrCont V A = A -x- List (A -x- LatClause V)
+
+LatAsmPtr : (Set -> Set) -> Set -> Set
+LatAsmPtr V = V o LatAsmPtrCont V
+
+{-# NO_POSITIVITY_CHECK #-}
+record SpecKLPC (K : Set -> Set) (V : Set -> Set) (A : Set) : Set where
+  constructor skC
+  inductive
+  field
+    oT : Set
+    eq : A === LatAsmPtrCont (TVar (SpecKLPC K V) V) oT
+    overlap {{kb}} : K oT
+
+--This assumes lattice property!
+liftBijTFunc : BijTFunc A B -> BijTFunc (LatAsmPtrCont V A) B
+liftBijTFunc (to <,> from) = (to o fst) <,> ((_, []) o from)
+
+module _ {K : Set -> Set} {V : Set -> Set} where
+  K' = SpecKLPC K V
+  module ClauseLearningLattice
+      {{tvm : ThresholdVarMonad K M (TVar K V)}}
+      {{kas : K derives (K o LatAsmPtrCont (TVar K' V))}}
+      {{ms : MonadState (LatClause (TVar K' (TVar K V))) M }} where
+
+      open ThresholdVarMonad tvm
+      open MonadState ms hiding (_>>=_;_>>_;return;_<$>_) renaming (modify to modifyS)
+
+      ptrTrans : {{k : K A}} -> TVar K V (LatAsmPtrCont (TVar K' V) A) -> TVar K' (TVar K V) A
+      ptrTrans {A = A} (TVarC OrigT {{k}} f OVar) = TVarC
+        (LatAsmPtrCont (TVar K' V) A)
+        {{ skC _ refl {{ it }} }}
+        ((just o fst) <,> (_, [])) --assumes lattice property
+        (f <bt$> (TVarC _ (just <,> id) OVar)) --has to be this way, because variable needs to be transformed
+
+      CLTVM : ThresholdVarMonad K M (TVar K' (TVar K V))
+      CLTVM = record {
+        cvm = record {
+          new = ptrTrans <$> new ;
+          read = \{(TVarC OrigT f v) -> do
+            x <- read (f <bt$> v)
+            modifyS ((_ , x , (TVarC OrigT f v)) ::_)
+            return x } ;
+          write = \{(TVarC OrigT {{skC _ refl}} (_ <,> from) v) x -> do
+            asm <- get
+            write v ({!  !} , {!!}) } } ;
+        tvbf = TVarBijTFunctor } --ThresholdVarMonad.tvbf tvm }
