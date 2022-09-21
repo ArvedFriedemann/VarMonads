@@ -41,7 +41,11 @@ record BoundedLattice (A : Set) : Set where
   open BoundedMeetSemilattice meet-bsl public
   open BoundedJoinSemilattice join-bsl public
 
-
+lat-leq : {{eq : Eq A}} -> {{lat : BoundedMeetSemilattice A}} ->
+  A -> A -> Bool
+lat-leq x y = y == (x /\ y)
+  where
+    open BoundedMeetSemilattice {{...}}
 
 data TrivLat (A : Set) : Set where
   trivtop   : TrivLat A

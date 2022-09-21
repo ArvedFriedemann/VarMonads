@@ -4,6 +4,7 @@ module SpecialVarMonads.LatticeClauseLearningVarMonad where
 open import AgdaAsciiPrelude.AsciiPrelude
 open import BasicVarMonads.ThresholdVarMonad
 open import Util.Derivation
+open import Util.Lattice
 
 private
   variable
@@ -35,6 +36,18 @@ module _ {V : Set -> Set} where
   --This assumes lattice property!
   liftBijTFunc : BijTFunc A B -> BijTFunc (LatAsmPtrCont V A) B
   liftBijTFunc (to <,> from) = (to o fst) <,> ((_, []) o from)
+
+  retrieveMinReason :
+    {{eq : Eq A}} ->
+    {{lat : BoundedMeetSemilattice A}} ->
+    A -> List (A -x- LatClause V) -> Maybe (List (LatClause V))
+  retrieveMinReason x lst = (map snd) <$> (head $
+      boolFilter (lat-leq x o (foldr _/\_ top) o map fst) (inits lst))
+    where
+      open BoundedMeetSemilattice {{...}}
+      open import AgdaAsciiPrelude.Instances
+      instance
+        _ = MonadMaybe
 
 module _ {K : Set -> Set} {V' : Set -> Set} where
   K' = SpecKLPC K V'
@@ -80,16 +93,27 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
 
         {-# TERMINATING #-}
         dfsFoldM :
-          (forall {A} -> A -> LatAsmPtr V A -> List (List B) -> B) ->
+          (forall {A} -> A -> V A -> List B -> B) ->
           B ->
           LatAsmPtr V A ->
           M B
-        dfsFoldM {B = B} {A = A} f def v = {!!}
+        dfsFoldM {B = B} f def (TVarC OrigT {{skC oT refl}} g v) = do --TODO: cleanup!
+            x <- fst <$> read v
+            fst <$> dfsFoldM' x (TVarC _ {{skC oT refl}} ((just o fst) <,> (_, [])) v) []
           where
-            dfsFoldM' : A -> LatAsmPtr V A -> StateT (List (Sigma Set V)) M B
-            dfsFoldM' x (TVarC OrigT {{skC t refl}} f v) visited
-              with ((_ , (TVarC OrigT {{skC t refl}} f v)) elem visited withEq eqSig)
+            dfsFoldM' : A -> V A -> StateT (List (Sigma Set V)) M B
+            dfsFoldM' x (TVarC OrigT {{skC oT refl}} g v) visited
+              with ((_ , (TVarC OrigT {{skC oT refl}} g v)) elem visited withEq eqSig)
             ...| true = return (def , visited)
             ...| false = do
-              (_ , asm) <- read v
-              {!!}
+              (x' , asm) <- read v
+              let subres = retrieveMinReason x' asm
+              maybe'
+                (\cls -> do
+                  (lst , visited') <- loop (concat cls) ([] , visited)
+                    \{  (A , x , v) (lst , visited) ->
+                      (map1 (_:: lst)) <$> dfsFoldM' x v visited}
+                  return (f x' (TVarC _ {{skC oT refl}} ((just o fst) <,> (_, [])) v) lst , visited')
+                )
+                (return (def , visited)) --TODO : correct?
+                subres
