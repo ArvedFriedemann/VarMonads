@@ -85,6 +85,9 @@ module _ where
 FMFTMonadTrans : MonadTrans FMFT
 FMFTMonadTrans = record { liftT = liftF }
 
+
+
+
 -- {{ms : MonadState (ActList (FMFT M')) M}}
 module _
     {{mon : Monad M}}
@@ -92,10 +95,9 @@ module _
     (run : M T -> M T) where
   open MonadState {{...}} using () renaming (put to putS; get to getS; modify to modifyS)
 
-  {-# TERMINATING #-}
   runFMFT : (A -> M B) -> FMFT M' A -> M B
   runFMFT cont (liftF m) = liftM m cont
-  runFMFT cont (forkF m) = run (runFMFT return (void {{mon = FMFTMonad}} m)) >>= cont
+  runFMFT cont (forkF m) = run (void $ runFMFT return m) >>= cont
   runFMFT cont (returnF x) = cont x
   runFMFT cont (bindF m f) = runFMFT (runFMFT cont o f) m
 

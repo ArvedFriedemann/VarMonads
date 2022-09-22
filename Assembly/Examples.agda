@@ -55,10 +55,10 @@ testReadResult = refl
 testFork : Maybe Nat
 testFork = flip runStdBranchingVarMonad read do
   v <- new {A = Nat}
-  fork $ write v 10
   fork $ do
     read (eqThreshold 0 <bt$> v)
     write v 20
+  fork $ write v 10
   return v
 
 testForkResult : testFork === just 20
