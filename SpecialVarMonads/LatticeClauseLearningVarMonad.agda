@@ -63,7 +63,7 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
       ptrTrans : {{k : K A}} -> TVar K V' (LatAsmPtrCont V A) -> V A
       ptrTrans {A = A} (TVarC OrigT {{k}} f OVar) = TVarC
         (LatAsmPtrCont V A)
-        {{ skC _ refl {{ it }} }}
+        {{ skC _ refl }}
         ((just o fst) <,> (_, [])) --assumes lattice property
         (f <bt$> (TVarC _ (just <,> id) OVar)) --has to be this way, because variable needs to be transformed
 
@@ -95,7 +95,7 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
         dfsFoldM :
           (forall {A} -> A -> V A -> List B -> B) ->
           B ->
-          LatAsmPtr V A ->
+          V A ->
           M B
         dfsFoldM {B = B} f def (TVarC OrigT {{skC oT refl}} g v) = do --TODO: cleanup!
             x <- fst <$> read v
@@ -117,3 +117,16 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
                 )
                 (return (def , visited)) --TODO : correct?
                 subres
+
+        deepestCut : V A -> M (LatClause V)
+        deepestCut = dfsFoldM (\{
+          x v [] -> [ _ , x , v ] ;
+          _ _ subclauses -> concat subclauses}) []
+
+        clauseProp : A -> V A -> LatClause V -> M T
+        clauseProp x (TVarC OrigT {{skC _ refl}} (_ <,> from) v) clause = do
+          mapM {B = T} (\{(_ , x' , v' ) -> void $ readC v' }) clause --TODO : THis is fishy. x' should be used...this might be the difference that the threshold function makes
+          write v (fst (from x) , [ fst (from x) , clause ])
+          where
+            open ThresholdVarMonad CLTVM using () renaming (read to readC; tvbf to tvbf')
+            open BijTFunctor tvbf' renaming (_<bt$>_ to _<bt$>'_)
