@@ -12,7 +12,7 @@ private
     M F K : Set -> Set
 
 LatAssignment : (Set -> Set) -> Set
-LatAssignment V = Sigma Set \A -> A -x- V A
+LatAssignment V = Sigma Set V
 
 LatClause : (Set -> Set) -> Set
 LatClause V = List (LatAssignment V)
@@ -58,7 +58,7 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
       {{ms : MonadState (LatClause V) M }} where
 
       open ThresholdVarMonad tvm
-      open MonadState ms hiding (_>>=_;_>>_;return;_<$>_) renaming (modify to modifyS)
+      open MonadState ms hiding (_>>=_;_>>_;return;_<$>_; join) renaming (modify to modifyS)
 
       ptrTrans : {{k : K A}} -> TVar K V' (LatAsmPtrCont V A) -> V A
       ptrTrans {A = A} (TVarC OrigT {{k}} f OVar) = TVarC
@@ -72,9 +72,10 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
       CLTVM = record {
         cvm = record {
           new = ptrTrans <$> new ;
-          read = \{(TVarC OrigT f v) -> do
-            x <- read (f <bt$> v)
-            modifyS ((_ , x , (TVarC OrigT f v)) ::_)
+          read = \{(TVarC OrigT {{skC oT refl}} (to <,> from) v) -> do
+            x <- read ((to <,> from) <bt$> v)
+            modifyS ((_ , (TVarC OrigT {{skC oT refl}}
+              ((\orig -> join $ whenMaybe (lat-leq (from x) orig) (to orig)) <,> from) v)) ::_)
             return x } ;
           write = \{(TVarC OrigT {{skC _ refl}} (_ <,> from) v) x -> do
             asm <- get
@@ -101,6 +102,8 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
             x <- fst <$> read v
             fst <$> dfsFoldM' x (TVarC _ {{skC oT refl}} ((just o fst) <,> (_, [])) v) []
           where
+            open ThresholdVarMonad CLTVM using () renaming (read to readC)
+
             dfsFoldM' : A -> V A -> StateT (List (Sigma Set V)) M B
             dfsFoldM' x (TVarC OrigT {{skC oT refl}} g v) visited
               with ((_ , (TVarC OrigT {{skC oT refl}} g v)) elem visited withEq eqSig)
@@ -111,21 +114,23 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
               maybe'
                 (\cls -> do
                   (lst , visited') <- loop (concat cls) ([] , visited)
-                    \{  (A , x , v) (lst , visited) ->
+                    \{  (A , v) (lst , visited) -> do
+                      x <- readC v
                       (map1 (_:: lst)) <$> dfsFoldM' x v visited}
                   return (f x' (TVarC _ {{skC oT refl}} ((just o fst) <,> (_, [])) v) lst , visited')
                 )
                 (return (def , visited)) --TODO : correct?
                 subres
 
+
         deepestCut : V A -> M (LatClause V)
         deepestCut = dfsFoldM (\{
-          x v [] -> [ _ , x , v ] ;
+          x v [] -> [ _ , v ] ;
           _ _ subclauses -> concat subclauses}) []
 
         clauseProp : A -> V A -> LatClause V -> M T
         clauseProp x (TVarC OrigT {{skC _ refl}} (_ <,> from) v) clause = do
-          mapM {B = T} (\{(_ , x' , v' ) -> void $ readC v' }) clause --TODO : THis is fishy. x' should be used...this might be the difference that the threshold function makes
+          mapM {B = T} (\{(_ , v' ) -> void $ readC v' }) clause --TODO : THis is fishy. x' should be used...this might be the difference that the threshold function makes
           write v (fst (from x) , [ fst (from x) , clause ])
           where
             open ThresholdVarMonad CLTVM using () renaming (read to readC; tvbf to tvbf')
