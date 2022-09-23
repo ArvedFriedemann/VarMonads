@@ -129,9 +129,9 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
           _ _ subclauses -> concat subclauses}) []
 
         clauseProp : A -> V A -> LatClause V -> M T
-        clauseProp x (TVarC OrigT {{skC _ refl}} (_ <,> from) v) clause = do
-          mapM {B = T} (\{(_ , v' ) -> void $ readC v' }) clause --TODO : THis is fishy. x' should be used...this might be the difference that the threshold function makes
-          write v (fst (from x) , [ fst (from x) , clause ])
+        clauseProp x v clause = do
+          mapM (void o readC o snd) clause
+          writeC v x
           where
-            open ThresholdVarMonad CLTVM using () renaming (read to readC; tvbf to tvbf')
+            open ThresholdVarMonad CLTVM using () renaming (read to readC; write to writeC; tvbf to tvbf')
             open BijTFunctor tvbf' renaming (_<bt$>_ to _<bt$>'_)
