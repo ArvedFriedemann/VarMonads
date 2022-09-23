@@ -75,7 +75,7 @@ module _ {K : Set -> Set} {V' : Set -> Set} where
           read = \{(TVarC OrigT {{skC oT refl}} (to <,> from) v) -> do
             x <- read ((to <,> from) <bt$> v)
             modifyS ((_ , (TVarC OrigT {{skC oT refl}}
-              ((\orig -> join $ whenMaybe (lat-leq (from x) orig) (to orig)) <,> from) v)) ::_)
+              ((\orig -> whenMaybe (lat-leq (from x) orig) x) <,> from) v)) ::_)
             return x } ;
           write = \{(TVarC OrigT {{skC _ refl}} (_ <,> from) v) x -> do
             asm <- get
