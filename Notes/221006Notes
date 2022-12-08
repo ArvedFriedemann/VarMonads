@@ -1,0 +1,56 @@
+step : M -> M
+
+propagate : M -> M
+propagate m with m' <- step m | m == m' /\ m
+... | true = m
+... | false = propagate m'
+
+
+module {{vm : VarMonad Mv V}} where
+  getStep : Mv A -> (M -> M)
+
+--General theory: Learn not concrete variables, but the propagators attached to it
+--equality instance on propagators: represent them as sets of clauses with equality and implication
+--Learned clauses need to learn something even when computation did not finish
+--branch as hell when all information is available but there was nothing smart to do
+
+--https://www.noredink.com/
+--https://nodered.org/
+--https://statebox.org/
+--https://enso.org/
+
+-- https://github.com/i-am-tom/dagless
+
+-- data HDagF (f :: Type -> Type) (xs :: [Type]) where
+--   HEmptyF
+--     :: HDagF f '[]
+--
+--   HNodeF
+--     :: (cs `AreChildrenOf` xs, x `In` xs ~ False)
+--     => (HListF f cs -> f x) -> HDagF f xs -> HDagF f (x ': xs)
+--
+-- newtype DaglessT f m pre post a
+--   = DaglessT { runDaglessT :: IxStateT m (HDagF f pre) (HDagF f post) a }
+--   deriving Functor
+--
+-- main collection = compute' do
+--   mass         <- persist 5
+--   acceleration <- persist 9.8
+--
+--   force <- using (mass, acceleration) $ \(m, a) -> do
+--     Mass         m' <- m
+--     Acceleration a' <- a
+--
+--     pure (Force (m' * a'))
+--
+--   displacement <- fetch @Displacement
+--
+--   using (force, displacement) $ \(f, d) -> do
+--     Force        f' <- f
+--     Displacement d' <- d
+--
+--     pure (Energy (f' * d'))
+
+
+
+-- clause learning runs wihtout knowing the code. Write interpreter for code and use clause learning to learn execution in advance
