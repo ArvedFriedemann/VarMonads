@@ -39,7 +39,16 @@ record MonadRun (MT : (Set -> Set) -> Set -> Set) : Set where
     run : {{mon : Monad M}} -> MT M A -> M A
     overlap {{mt}} : MonadTrans MT
 
+record MonadFail (M : Set -> Set) : Set where
+  field
+    fail : M A
+    overlap {{mon}} : Monad M
 
+MaybeMonadFail : MonadFail Maybe
+MaybeMonadFail = record { fail = nothing }
+  where
+    open import AgdaAsciiPrelude.Instances
+    instance _ = MonadMaybe
 
 MaybeT : (Set -> Set) -> Set -> Set
 MaybeT M A = M (Maybe A)
