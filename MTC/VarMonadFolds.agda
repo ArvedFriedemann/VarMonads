@@ -32,8 +32,8 @@ testMTC = runDefVarMonad do
   {-
   --this creates an infinite data type. Termination checker does not catch it!
   write v2 (cons false v2)
-  lst <- read v2
-  foldBVM {F = ListF Bool} (\{
+  --lst <- read v2
+  read v2 >>= foldBVM {F = ListF Bool} (\{
     [[_]] nilF -> return false;
-    [[_]] (consF x xs) -> (| pure x  || [[ xs ]] |)}) lst
+    [[_]] (consF x xs) -> (| pure x  || [[ xs ]] |)})
   -}
