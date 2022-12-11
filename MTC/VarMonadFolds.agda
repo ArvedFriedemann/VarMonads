@@ -14,7 +14,7 @@ open BaseVarMonad {{...}}
 
 foldBVM : {{bvm : BaseVarMonad M V}} ->
   Algebra F (M A) -> Fix (F o V) -> M A
-foldBVM alg = foldF \ _ [[_]] f -> alg _ (read >=> [[_]]) f
+foldBVM alg = foldF \ [[_]] f -> alg (read >=> [[_]]) f
 
 open import Assembly.StdVarMonad
 

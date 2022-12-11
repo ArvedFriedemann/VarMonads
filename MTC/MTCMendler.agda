@@ -10,7 +10,7 @@ private
     F V : Set -> Set
 
 Algebra : (Set -> Set) -> Set -> Set
-Algebra F A = forall R -> (R -> A) -> F R -> A
+Algebra F A = forall {R} -> (R -> A) -> F R -> A
 
 Fix : (Set -> Set) -> Set
 Fix F = forall A -> Algebra F A -> A
@@ -19,15 +19,15 @@ foldF : Algebra F A -> Fix F -> A
 foldF alg f = f _ alg
 
 In : F (Fix F) -> Fix F
-In f A alg = alg _ (foldF alg) f
+In f A alg = alg (foldF alg) f
 
 Out : {{func : Functor F}} -> Fix F -> F (Fix F)
-Out = foldF \ _ [[_]] -> (In o [[_]]) <$>f_
+Out = foldF \ [[_]] -> (In o [[_]]) <$>f_
 
 open import AgdaAsciiPrelude.TrustMe
 
 OutF : {{func : Functor F}} -> Fix (F o V) -> (F o V) (Fix (F o V))
-OutF = foldF \R [[_]] f -> trustVal <$>f f
+OutF = foldF \ [[_]] f -> trustVal <$>f f
 
 data ListF (A : Set) (B : Set) : Set where
   nilF : ListF A B

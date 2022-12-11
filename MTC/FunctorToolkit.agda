@@ -43,8 +43,8 @@ module Temp where
   module Liststuff where
     any' : Fix (ListF Bool) -> Bool
     any' = foldF \{
-      _ [[_]] (inl c) -> false;
-      _ [[_]] (inr (Kc x :c*: Kc xs)) -> x || [[ xs ]] }
+      [[_]] (inl c) -> false;
+      [[_]] (inr (Kc x :c*: Kc xs)) -> x || [[ xs ]] }
 
     [] : Fix (ListF A)
     [] = In (inl (Kc tt))
@@ -107,8 +107,8 @@ module Temp where
 
     toPartialFkt : Algebra F (M A) -> Fix (F :+: C :+: C) -> M A
     toPartialFkt alg = foldF \{
-      _ [[_]] (inl f) -> alg _ [[_]] f;
-      _ [[_]] (inr _) -> fail }
+      [[_]] (inl f) -> alg [[_]] f;
+      [[_]] (inr _) -> fail }
 
   record LatConstr (G : Set -> Set) : Set where
     field
@@ -122,9 +122,9 @@ module Temp where
 
   toPartialFkt' : (LatAlgebra F G) -> Fix (F :+: C :+: C) -> Fix (G :+: C :+: C)
   toPartialFkt' {G = G} alg = foldF \{
-    _ [[_]] (inl f) -> fromMaybe top (alg {{latConstr}} _ (just o [[_]]) f);
-    _ [[_]] (inr (inl _)) -> top;
-    _ [[_]] (inr (inr _)) -> bot }
+    [[_]] (inl f) -> fromMaybe top (alg {{latConstr}} (just o [[_]]) f);
+    [[_]] (inr (inl _)) -> top;
+    [[_]] (inr (inr _)) -> bot }
     where
       latConstr : LatConstr G
       latConstr = record {
@@ -144,9 +144,9 @@ module Temp where
 
     any'' : Fix (ListF Bool :+: C :+: C) -> Maybe Bool
     any'' = toPartialFkt \{
-        _ [[_]] (inl x) -> just false;
-        _ [[_]] (inr (Kc true  :c*: Kc xs)) -> just true;
-        _ [[_]] (inr (Kc false :c*: Kc xs)) -> [[ xs ]]
+        [[_]] (inl x) -> just false;
+        [[_]] (inr (Kc true  :c*: Kc xs)) -> just true;
+        [[_]] (inr (Kc false :c*: Kc xs)) -> [[ xs ]]
       }
 
     test : Maybe Bool
@@ -170,12 +170,12 @@ module Temp where
     node' lft rgt = In (inl $ inr (Kc lft :c*: Kc rgt))
 
     swapAlg : {{Monad M}} -> Algebra Tree (M (Fix Tree))
-    swapAlg _ [[_]] (inl x) = return leaf
-    swapAlg _ [[_]] (inr ((Kc x) :c*: (Kc y))) = (| node [[ y ]] [[ x ]] |)
+    swapAlg [[_]] (inl x) = return leaf
+    swapAlg [[_]] (inr ((Kc x) :c*: (Kc y))) = (| node [[ y ]] [[ x ]] |)
 
     swapAlg' : LatAlgebra Tree Tree
-    swapAlg' _ [[_]] (inl x) = return leaf'
-    swapAlg' _ [[_]] (inr (Kc x :c*: Kc y)) = (| node' [[ y ]] [[ x ]] |)
+    swapAlg' [[_]] (inl x) = return leaf'
+    swapAlg' [[_]] (inr (Kc x :c*: Kc y)) = (| node' [[ y ]] [[ x ]] |)
 
     swap : Fix (Tree :+: C :+: C) -> Maybe (Fix Tree)
     swap = toPartialFkt swapAlg
@@ -205,8 +205,8 @@ module Temp where
   {-# TERMINATING #-}
   foldAsm : Algebra F A -> Asm (Fix (F :+: K Nat)) -> Fix (F :+: K Nat) -> A
   foldAsm alg asm = foldF \{
-    _ [[_]] (inl f) -> alg _ [[_]] f;
-    _ [[_]] (inr (Kc n)) -> foldAsm alg asm (asm n)
+    [[_]] (inl f) -> alg [[_]] f;
+    [[_]] (inr (Kc n)) -> foldAsm alg asm (asm n)
     }
 
   {-
