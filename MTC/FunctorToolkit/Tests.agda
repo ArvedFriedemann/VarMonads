@@ -1,8 +1,10 @@
+{-# OPTIONS --type-in-type #-}
 module MTC.FunctorToolkit.Tests where
 
 open import MTC.FunctorToolkit.FunctorToolkit
-open import AgdaAsciiPrelude.AsciiPrelude
-
+open import AgdaAsciiPrelude.AsciiPrelude hiding ([]; _::_)
+open import MTC.MTCMendler hiding (ListF)
+open import Util.Lattice
 
 ListF : Set -> Set -> Set
 ListF A = C :+: (K A :*: I)
