@@ -26,6 +26,13 @@ data _:+:_ (F G : Set -> Set) (B : Set) : Set where
   inl : F B -> (F :+: G) B
   inr : G B -> (F :+: G) B
 
+functor-:+: : {{Functor F}} -> {{Functor G}} -> Functor (F :+: G)
+functor-:+: = {!!}
+
+functor-K : Functor (K A)
+functor-K = record { _<$>_ = \ {_ (Kc x) -> Kc x  } }
+
+
 module Temp where
   ListF : Set -> Set -> Set
   ListF A = C :+: (K A :*: I)
@@ -123,62 +130,86 @@ module Temp where
       latConstr = record {
         inj = inl ;
         proj = \{(inl g) -> just g; _ -> nothing} }
+  module _ where
+    instance
+      _ = MaybeMonadFail
+      _ = MonadMaybe
+
+    [] : Fix (ListF A :+: C :+: C)
+    [] = In (inl $ inl (Kc tt))
+
+    infixr 5 _::_
+    _::_ : A -> Fix (ListF A :+: C :+: C) -> Fix (ListF A :+: C :+: C)
+    x :: xs = In (inl $ inr (Kc x :c*: Kc xs))
+
+    any'' : Fix (ListF Bool :+: C :+: C) -> Maybe Bool
+    any'' = toPartialFkt \{
+        _ [[_]] (inl x) -> just false;
+        _ [[_]] (inr (Kc true  :c*: Kc xs)) -> just true;
+        _ [[_]] (inr (Kc false :c*: Kc xs)) -> [[ xs ]]
+      }
+
+    test : Maybe Bool
+    test = any'' (false :: false :: top )--any'' (false :: true :: top )
+
+    Tree = C :+: (I :*: I)
+
+    leaf : Fix Tree
+    leaf = In $ inl (Kc tt)
+
+    node : Fix Tree -> Fix Tree -> Fix Tree
+    node lft rgt = In (inr (Kc lft :c*: Kc rgt))
+
+    nodeF : {{LatConstr Tree}} -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C)
+    nodeF lft rgt = In (inj (inr (Kc lft :c*: Kc rgt)))
+
+    leaf' : Fix (Tree :+: C :+: C)
+    leaf' = In $ inl $ inl (Kc tt)
+
+    node' : Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C)
+    node' lft rgt = In (inl $ inr (Kc lft :c*: Kc rgt))
+
+    swapAlg : {{Monad M}} -> Algebra Tree (M (Fix Tree))
+    swapAlg _ [[_]] (inl x) = return leaf
+    swapAlg _ [[_]] (inr ((Kc x) :c*: (Kc y))) = (| node [[ y ]] [[ x ]] |)
+
+    swapAlg' : LatAlgebra Tree Tree
+    swapAlg' _ [[_]] (inl x) = return leaf'
+    swapAlg' _ [[_]] (inr (Kc x :c*: Kc y)) = (| node' [[ y ]] [[ x ]] |)
+
+    swap : Fix (Tree :+: C :+: C) -> Maybe (Fix Tree)
+    swap = toPartialFkt swapAlg
+
+    swap' : Fix (Tree :+: C :+: C) -> (Fix (Tree :+: C :+: C))
+    swap' = toPartialFkt' swapAlg'
+
+    swapTest = swap (node' (node' top leaf') leaf')--swap (node' (node' leaf' leaf') leaf')
+    swapTest2 : swap' (node' (node' top leaf') leaf') === (node' leaf' (node' leaf' top))
+    swapTest2 = refl
+
+    KFixSL : Semilattice A -> Semilattice (Fix (K A))
+    KFixSL sla = FixSL {{{!!}}} {{KSL {{sla}} }}
 
   instance
-    _ = MaybeMonadFail
-    _ = MonadMaybe
+    _ = functor-:+:
+    _ = functor-K
 
-  [] : Fix (ListF A :+: C :+: C)
-  [] = In (inl $ inl (Kc tt))
+  open Functor {{...}} renaming (_<$>_ to _<$>'_)
 
-  infixr 5 _::_
-  _::_ : A -> Fix (ListF A :+: C :+: C) -> Fix (ListF A :+: C :+: C)
-  x :: xs = In (inl $ inr (Kc x :c*: Kc xs))
+  typeof : Nat -> Set
+  typeof n = {!!}
 
-  any'' : Fix (ListF Bool :+: C :+: C) -> Maybe Bool
-  any'' = toPartialFkt \{
-      _ [[_]] (inl x) -> just false;
-      _ [[_]] (inr (Kc true  :c*: Kc xs)) -> just true;
-      _ [[_]] (inr (Kc false :c*: Kc xs)) -> [[ xs ]]
+  Asm : Set -> Set
+  Asm A = (n : Nat) -> A
+
+  {-# TERMINATING #-}
+  foldAsm : Algebra F A -> Asm (Fix (F :+: K Nat)) -> Fix (F :+: K Nat) -> A
+  foldAsm alg asm = foldF \{
+    _ [[_]] (inl f) -> alg _ [[_]] f;
+    _ [[_]] (inr (Kc n)) -> foldAsm alg asm (asm n)
     }
 
-  test : Maybe Bool
-  test = any'' (false :: false :: top )--any'' (false :: true :: top )
-
-  Tree = C :+: (I :*: I)
-
-  leaf : Fix Tree
-  leaf = In $ inl (Kc tt)
-
-  node : Fix Tree -> Fix Tree -> Fix Tree
-  node lft rgt = In (inr (Kc lft :c*: Kc rgt))
-
-  nodeF : {{LatConstr Tree}} -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C)
-  nodeF lft rgt = In (inj (inr (Kc lft :c*: Kc rgt)))
-
-  leaf' : Fix (Tree :+: C :+: C)
-  leaf' = In $ inl $ inl (Kc tt)
-
-  node' : Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C) -> Fix (Tree :+: C :+: C)
-  node' lft rgt = In (inl $ inr (Kc lft :c*: Kc rgt))
-
-  swapAlg : {{Monad M}} -> Algebra Tree (M (Fix Tree))
-  swapAlg _ [[_]] (inl x) = return leaf
-  swapAlg _ [[_]] (inr ((Kc x) :c*: (Kc y))) = (| node [[ y ]] [[ x ]] |)
-
-  swapAlg' : LatAlgebra Tree Tree
-  swapAlg' _ [[_]] (inl x) = return leaf'
-  swapAlg' _ [[_]] (inr (Kc x :c*: Kc y)) = (| node' [[ y ]] [[ x ]] |)
-
-  swap : Fix (Tree :+: C :+: C) -> Maybe (Fix Tree)
-  swap = toPartialFkt swapAlg
-
-  swap' : Fix (Tree :+: C :+: C) -> (Fix (Tree :+: C :+: C))
-  swap' = toPartialFkt' swapAlg'
-
-  swapTest = swap (node' (node' top leaf') leaf')--swap (node' (node' leaf' leaf') leaf')
-  swapTest2 : swap' (node' (node' top leaf') leaf') === (node' leaf' (node' leaf' top))
-  swapTest2 = refl
-
-  KFixSL : Semilattice A -> Semilattice (Fix (K A))
-  KFixSL sla = FixSL {{{!!}}} {{KSL {{sla}} }}
+  {-
+  foldAsm : Algebra F A -> TAsm -> Fix (F o K Nat) -> A
+  foldAsm alg asm = foldF \_ [[_]] -> alg _ \{(Kc n) -> [[ asm n _ ]]}
+  -}
