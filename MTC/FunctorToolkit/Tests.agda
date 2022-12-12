@@ -49,7 +49,7 @@ KSL : {{Semilattice A}} -> Semilattice (K A B)
 KSL = record { _<>_ = \{
     (Kc a) (Kc a') -> Kc (a <> a')
   } }
-
+{-}
 :*:SL : {{Semilattice (F B)}} -> {{Semilattice (G B)}} -> Semilattice ((F :*: G) B)
 :*:SL = record { _<>_ = \{
     (f1 :c*: g1) (f2 :c*: g2) -> (f1 <> f2) :c*: (g1 <> g2) } }
@@ -62,12 +62,12 @@ KSL = record { _<>_ = \{
     (inl x)       <>' (inl y)       = inl $ x <> y
     (inr (inl x)) <>' (inr (inl y)) = inr (inl $ x <> y)
     _             <>' _             = inr $ inr def
-
+-}
 open import Util.Monad
 open MonadFail {{...}}
 open import AgdaAsciiPrelude.Instances
 
-
+{- --TODO: :+: is left associative
 top : Fix (F :+: C :+: C)
 top = In (inr (inl (Kc tt)))
 
@@ -161,7 +161,7 @@ module _ where
 
   KFixSL : Semilattice A -> Semilattice (Fix (K A))
   KFixSL sla = FixSL {{{!!}}} {{KSL {{sla}} }}
-
+-}
 instance
   _ = functor-:+:
   _ = functor-K
