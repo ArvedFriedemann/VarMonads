@@ -5,9 +5,10 @@ open import AgdaAsciiPrelude.AsciiPrelude hiding ([]; _::_)
 open import MTC.MTCMendler hiding (ListF)
 open import Util.Lattice
 
-variable
-  A B : Set
-  F G H J M : Set -> Set
+private
+  variable
+    A B : Set
+    F G H J M : Set -> Set
 
 data K (A : Set) (B : Set) : Set where
   Kc : A -> K A B
@@ -19,6 +20,7 @@ C : Set -> Set
 C = K T
 
 infixl 5 _:*:_
+infixl 5 _:c*:_
 data _:*:_ (F G : Set -> Set) (B : Set) : Set where
   _:c*:_ : F B -> G B -> (F :*: G) B
 
@@ -122,8 +124,8 @@ Semilattice-:+: {B = B} {F} {G} neut = record { _<>_ = _<>'_ }
     _ <>' _ = inj neut
 -}
 Semilattice-:+: :
-  (H B) ->
-  (J B) ->
+  (neut : H B) ->
+  (elim : J B) ->
   {{scH : H <: M }} ->
   {{scJ : J <: M }} ->
   {{slF : Semilattice (F B)}} ->

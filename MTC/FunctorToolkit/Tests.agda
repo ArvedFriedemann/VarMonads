@@ -6,6 +6,11 @@ open import AgdaAsciiPrelude.AsciiPrelude hiding ([]; _::_)
 open import MTC.MTCMendler hiding (ListF)
 open import Util.Lattice
 
+private
+  variable
+    A B : Set
+    F G : Set -> Set
+
 ListF : Set -> Set -> Set
 ListF A = C :+: (K A :*: I)
 
@@ -23,6 +28,11 @@ module Liststuff where
 
   _::_ : A -> Fix (ListF A) -> Fix (ListF A)
   x :: xs = In (inr (Kc x :c*: Kc xs))
+
+open _<:_ {{...}}
+
+node : {{BinTreeF A <: F}} -> A -> Fix F -> Fix F -> Fix F
+node a lft rgt = In $ inj $ inr $ (Kc a :c*: Kc lft :c*: Kc rgt)
 
 {-
 record Unify (F : Set -> Set) : Set where
@@ -162,6 +172,7 @@ module _ where
   KFixSL : Semilattice A -> Semilattice (Fix (K A))
   KFixSL sla = FixSL {{{!!}}} {{KSL {{sla}} }}
 -}
+{-}
 instance
   _ = functor-:+:
   _ = functor-K
@@ -180,7 +191,7 @@ foldAsm alg asm = foldF \{
   [[_]] (inl f) -> alg [[_]] f;
   [[_]] (inr (Kc n)) -> foldAsm alg asm (asm n)
   }
-
+-}
 {-
 foldAsm : Algebra F A -> TAsm -> Fix (F o K Nat) -> A
 foldAsm alg asm = foldF \_ [[_]] -> alg _ \{(Kc n) -> [[ asm n _ ]]}
