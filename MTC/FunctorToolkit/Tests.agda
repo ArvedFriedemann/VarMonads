@@ -21,18 +21,18 @@ module Liststuff where
   any' : Fix (ListF Bool) -> Bool
   any' = foldF \{
     [[_]] (inl c) -> false;
-    [[_]] (inr (Kc x :c*: Kc xs)) -> x || [[ xs ]] }
+    [[_]] (inr (Kc x :c*: xs)) -> x || [[ xs ]] }
 
   [] : Fix (ListF A)
   [] = In (inl (Kc tt))
 
   _::_ : A -> Fix (ListF A) -> Fix (ListF A)
-  x :: xs = In (inr (Kc x :c*: Kc xs))
+  x :: xs = In (inr (Kc x :c*: xs))
 
 open _<:_ {{...}}
 
 node : {{BinTreeF A <: F}} -> A -> Fix F -> Fix F -> Fix F
-node a lft rgt = In $ inj $ inr $ (Kc a :c*: Kc lft :c*: Kc rgt)
+node a lft rgt = In $ inj $ inr $ (Kc a :c*: lft :c*: rgt)
 
 {-
 record Unify (F : Set -> Set) : Set where

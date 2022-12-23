@@ -14,7 +14,7 @@ data K (A : Set) (B : Set) : Set where
   Kc : A -> K A B
 
 I : Set -> Set
-I B = K B B
+I = id
 
 C : Set -> Set
 C = K T
