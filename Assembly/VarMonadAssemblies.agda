@@ -126,7 +126,7 @@ stdForkThresholdV : Set -> Set
 stdForkThresholdV = (TVar (SpecK stdK defaultVarMonadStateM) NatPtr)
 
 stdForkThresholdSub : Set -> Set
-stdForkThresholdSub = FNCDVarMon stdK stdForkThresholdV
+stdForkThresholdSub = FNCDVarMon defaultVarMonadStateM stdK stdForkThresholdV
 
 stdForkThresholdVarMonadM : Set -> Set
 stdForkThresholdVarMonadM = FMFT stdForkThresholdSub
@@ -182,7 +182,9 @@ module _ where
           open GetProps (GetPropsTVar {K = stdK} {M = defaultVarMonadStateM} {V = NatPtr})
           open BijTFunctor (TVarBijTFunctor {K = (SpecK stdK defaultVarMonadStateM)} {V = NatPtr})
         in record { getPropVar = \{ v -> (
-          (just o map \{(B , t , fm) -> B , t , (\m s -> liftF {!!}) o fm}) <,> {!!}) <bt$> (getPropVar v)} }
+          (just o map \{(B , t , fm) -> B , t , (\m s -> (_, s) <$> liftF (liftFNCDF m)) o fm}) <,>
+          map \{(B , t , f) -> B , t , (\m s -> ( tt , (snd $ propagateSFTVM (m []) s) )) o f})
+          <bt$> (getPropVar v)} }
 
     in ThresholdVarMonad=>BranchingVarMonad
         {{eq = PEqToEq {{PEqTVar}} }}

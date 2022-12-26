@@ -90,7 +90,7 @@ liftThresholdVarMonad liftT tvm = record {
   where open ThresholdVarMonad tvm
 
 FreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
-  ThresholdVarMonad K (FNCDVarMon K (TVar K V)) (TVar K V)
+  ThresholdVarMonad K (FNCDVarMon M K (TVar K V)) (TVar K V)
 FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
@@ -104,15 +104,15 @@ ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {
     write = write }
   where open ThresholdVarMonad tvm
 
-FNCDCont : (Set -> Set) -> (Set -> Set) -> Set -> Set
-FNCDCont K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon K V A)
+FNCDCont : (Set -> Set) -> (Set -> Set) -> (Set -> Set) -> Set -> Set
+FNCDCont M K V A = Sigma Set \B -> V B -x- (B -> FNCDVarMon M K V A)
 
 module _ where
   open ConstrDefVarMonad {{...}}
 
   runFreeThresholdVarMonad :
     {{cvm : ConstrDefVarMonad K M V}} ->
-    FNCDVarMon K (TVar K V) A -> M (A or (FNCDCont K (TVar K V) A))
+    FNCDVarMon M K (TVar K V) A -> M (A or (FNCDCont M K (TVar K V) A))
   runFreeThresholdVarMonad newF = (left o (TVarC _ (just <,> id))) <$> new
   runFreeThresholdVarMonad (readF (TVarC OrigT (to <,> from) OVar)) =
     (maybe' left (right (_ , (TVarC OrigT (to <,> from) OVar) , returnF))) o to
@@ -124,6 +124,7 @@ module _ where
       (left x) -> runFreeThresholdVarMonad (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
+  runFreeThresholdVarMonad (liftFNCDF m) = left <$> m
 
 PropList : (Set -> Set) -> Set -> Set
 PropList M A = List (Sigma Set \B -> (A -> Maybe B) -x- (B -> M T))
@@ -147,7 +148,7 @@ getPropPointer {K} {M} {V} {A} {{lat}} (TVarC OrigT {{OT , refl , k}} (to <,> fr
         open BoundedMeetSemilattice (lat {{k}})
 
 SpecialFreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
-  ThresholdVarMonad K (FNCDVarMon K (TVar (SpecK K M) V)) (TVar (SpecK K M) V)
+  ThresholdVarMonad K (FNCDVarMon M K (TVar (SpecK K M) V)) (TVar (SpecK K M) V)
 SpecialFreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor}
@@ -169,15 +170,22 @@ firePropsOn v props = void $ sequenceM $ flip map props
 module _ where
   open import MiscMonads.ConcurrentMonad
   private
+    lengthThreshold : Nat -> BijTFunc (List A) (List A)
+    lengthThreshold n = (\lst -> ifDec (length lst) <? n then nothing else just lst) <,> id
+      --where instance _ = eqNat
+
     {-# TERMINATING #-}
-    _=props>'_ : {{ThresholdVarMonad K M V}} -> {{GetProps M V}} -> V A -> V A -> M T
-    v =props>' v' = read (getPropVar v) >>= firePropsOn v' >> v =props>' v'
+    _=props>'_ : {{ThresholdVarMonad K M V}} -> {{GetProps M V}} -> V A -> V A -> Nat -> M T
+    (v =props>' v') n = do
+        lst <- read (lengthThreshold n <bt$> getPropVar v)
+        firePropsOn v' lst
+        (v =props>' v') (length lst + 3)
       where
         open GetProps {{...}}
         open ThresholdVarMonad {{...}}
 
   _=props>_ : {{ThresholdVarMonad K M V}} -> {{MonadFork M}} -> {{GetProps M V}} -> V A -> V A -> M T
-  v =props> v' = fork (v =props>' v')
+  v =props> v' = fork $ (v =props>' v') 0
     where
       open MonadFork {{...}}
 
@@ -228,7 +236,7 @@ module runFreeThresholdVarMonadPropagation
     propagatorWrite (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) x =
       modify v (propagatorModify {{k = k}} (fst $ from x)) >>= runPropagators
 
-  runFNCDCont : FNCDVarMon K (TVar K' V) A -> M (A or (FNCDCont K (TVar K' V) A))
+  runFNCDCont : FNCDVarMon M K (TVar K' V) A -> M (A or (FNCDCont M K (TVar K' V) A))
   --notice how we write an empty propagator list back. This is not a problem because we ignore that during the write!
   runFNCDCont newF = (left o (TVarC _ {{(_ , refl , it)}} ((just o fst) <,> (_, [])) )) <$> new (top , [])
   runFNCDCont (readF (TVarC OrigT (to <,> from) OVar)) =
@@ -240,6 +248,7 @@ module runFreeThresholdVarMonadPropagation
       (left x) -> runFNCDCont (f x) ;
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
+  runFNCDCont (liftFNCDF m) = left <$> m
 
   -- shallowInspectFNCD : FNCDVarMon K (TVar K' V) A -> (Maybe A -x- String)
   -- shallowInspectFNCD newF = nothing , "newF"
@@ -257,7 +266,7 @@ module runFreeThresholdVarMonadPropagation
   -- inspectFNCD = snd o shallowInspectFNCD
 
   {-# TERMINATING #-}
-  runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont K (TVar K' V) A) -> MaybeT M B
+  runFNCDtoVarProp : (A -> MaybeT M B) -> A or (FNCDCont M K (TVar K' V) A) -> MaybeT M B
   runFNCDtoVarProp cont' (left x) = cont' x
   runFNCDtoVarProp cont' (right (D , (TVarC _ {{(OrigT , refl , k)}} (to <,> from) v) , cont)) =
       modify v (\{(x , props) ->
@@ -267,5 +276,5 @@ module runFreeThresholdVarMonadPropagation
       newprop : D -> M T
       newprop = runFNCDCont o cont >=> runFNCDtoVarProp cont' >=> const (return tt)
 
-  runFNCD : FNCDVarMon K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
+  runFNCD : FNCDVarMon M K (TVar K' V) A -> (A -> MaybeT M B) -> MaybeT M B
   runFNCD m cont = runFNCDCont m >>= runFNCDtoVarProp cont

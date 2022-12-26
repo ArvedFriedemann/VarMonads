@@ -88,14 +88,15 @@ data FCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where
   returnF : A -> FCDVarMon K V A
   bindF : FCDVarMon K V A -> (A -> FCDVarMon K V B) -> FCDVarMon K V B
 
-data FNCDVarMon (K : Set -> Set) (V : Set -> Set) : Set -> Set where
-  newF : {{k : K A}} -> FNCDVarMon K V (V A)
-  readF : V A -> FNCDVarMon K V A
-  writeF : V A -> A -> FNCDVarMon K V T
-  returnF : A -> FNCDVarMon K V A
-  bindF : FNCDVarMon K V A -> (A -> FNCDVarMon K V B) -> FNCDVarMon K V B
+data FNCDVarMon (M : Set -> Set) (K : Set -> Set) (V : Set -> Set) : Set -> Set where
+  newF : {{k : K A}} -> FNCDVarMon M K V (V A)
+  readF : V A -> FNCDVarMon M K V A
+  writeF : V A -> A -> FNCDVarMon M K V T
+  returnF : A -> FNCDVarMon M K V A
+  bindF : FNCDVarMon M K V A -> (A -> FNCDVarMon M K V B) -> FNCDVarMon M K V B
+  liftFNCDF : M A -> FNCDVarMon M K V A
 
-FNCDVarMonNewConstrDefVarMonad : NewConstrDefVarMonad K (FNCDVarMon K V) V
+FNCDVarMonNewConstrDefVarMonad : NewConstrDefVarMonad K (FNCDVarMon M K V) V
 FNCDVarMonNewConstrDefVarMonad = record {
   new = newF ;
   read = readF ;
@@ -104,7 +105,7 @@ FNCDVarMonNewConstrDefVarMonad = record {
     return = returnF ;
     _>>=_ = bindF } }
 
-MonadFNCDVarMon : Monad (FNCDVarMon K V)
+MonadFNCDVarMon : Monad (FNCDVarMon M K V)
 MonadFNCDVarMon = record {
   return = returnF ;
   _>>=_ = bindF }
