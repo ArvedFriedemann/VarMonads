@@ -131,6 +131,7 @@ module ConnectionOperations
   {{stm : MonadSTM M' M}}
   {{mf : MonadFork M}}
   {{tvm : ThresholdVarMonad K M V}}
+  {{gp : GetProps M V}}
   {{mr : MonadReader (List (V S)) M}} where
 
   open MonadReader {{...}} using (reader; local)

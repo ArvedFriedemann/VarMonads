@@ -151,6 +151,16 @@ SpecialFreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor}
 
+record GetProps
+    (M : Set -> Set)
+    (V : Set -> Set) : Set where
+  field
+    getPropVar : V A -> V (PropList M A)
+
+GetPropsTVar : {{K derives BoundedMeetSemilattice}} -> GetProps M (TVar (SpecK K M) V)
+GetPropsTVar {K} {M} = record { getPropVar = getPropPointer {M = M} }
+
+
 open import BasicVarMonads.ModifyVarMonad
 open import MiscMonads.ConcurrentMonad
 open import Util.Monad
