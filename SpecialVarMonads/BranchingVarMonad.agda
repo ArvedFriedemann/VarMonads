@@ -180,13 +180,13 @@ module ConnectionOperations
   getParent : {{k : K A}} -> SVar V S A -> M (SVar V S A)
   getParent (SVarC lst v) = do
     (c? , (SVarC lstpar vpar)) <- getParentAndCreated? (SVarC lst v)
-    when c? (vpar =p> v)
+    when c? (vpar =p> v >> vpar =props> v)
     return (SVarC lstpar vpar)
 
   getChild : {{k : K A}} -> V S -> SVar V S A -> M (SVar V S A)
   getChild vs (SVarC lst v) = do
     (c? , (SVarC lstpar vc)) <- getChildAndCreated? vs (SVarC lst v)
-    when c? (v =p> vc)
+    when c? (v =p> vc >> v =props> vc)
     return (SVarC lstpar vc)
 
 

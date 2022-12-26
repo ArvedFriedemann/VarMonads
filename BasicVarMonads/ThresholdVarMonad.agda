@@ -7,6 +7,7 @@ open import AgdaAsciiPrelude.Instances
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Derivation
 open import Util.Lattice
+open import Util.Monad
 --open import Debug.Trace
 
 private
@@ -156,6 +157,30 @@ record GetProps
     (V : Set -> Set) : Set where
   field
     getPropVar : V A -> V (PropList M A)
+
+firePropsOn : {{ThresholdVarMonad K M V}} -> V A -> PropList M A -> M T
+firePropsOn v props = void $ sequenceM $ flip map props
+    \{(_ , f , act) -> read ((f <,> trustVal tt) <bt$> v) >>= act }
+  where
+    open ThresholdVarMonad {{...}}
+    --TrustVal here is fine because temporary variable is never written to
+    open import AgdaAsciiPrelude.TrustMe
+
+module _ where
+  open import MiscMonads.ConcurrentMonad
+  private
+    {-# TERMINATING #-}
+    _=props>'_ : {{ThresholdVarMonad K M V}} -> {{GetProps M V}} -> V A -> V A -> M T
+    v =props>' v' = read (getPropVar v) >>= firePropsOn v' >> v =props>' v'
+      where
+        open GetProps {{...}}
+        open ThresholdVarMonad {{...}}
+
+  _=props>_ : {{ThresholdVarMonad K M V}} -> {{MonadFork M}} -> {{GetProps M V}} -> V A -> V A -> M T
+  v =props> v' = fork (v =props>' v')
+    where
+      open MonadFork {{...}}
+
 
 GetPropsTVar : {{K derives BoundedMeetSemilattice}} -> GetProps M (TVar (SpecK K M) V)
 GetPropsTVar {K} {M} = record { getPropVar = getPropPointer {M = M} }

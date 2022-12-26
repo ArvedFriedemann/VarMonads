@@ -177,10 +177,18 @@ module _ where
     (stdForkThresholdV T)
   stdBranchingVarMonad = let
       tvm = readerTVM stdForkThresholdVarMonad
+      gp : GetProps stdBranchingVarMonadM stdForkThresholdV
+      gp = let
+          open GetProps (GetPropsTVar {K = stdK} {M = defaultVarMonadStateM} {V = NatPtr})
+          open BijTFunctor (TVarBijTFunctor {K = (SpecK stdK defaultVarMonadStateM)} {V = NatPtr})
+        in record { getPropVar = \{ v -> (
+          (just o map \{(B , t , fm) -> B , t , (\m s -> liftF {!!}) o fm}) <,> {!!}) <bt$> (getPropVar v)} }
+
     in ThresholdVarMonad=>BranchingVarMonad
         {{eq = PEqToEq {{PEqTVar}} }}
         {{cvm = ThresholdVarMonad=>ConstrDefVarMonad {{ tvm }} }}
         {{tvm = tvm}}
+        {{gp = gp}}
 
   stdBranchingVarMonadFork : MonadFork (stdBranchingVarMonadM)
   stdBranchingVarMonadFork = it
