@@ -124,11 +124,26 @@ module _ where
       (right (B , v , cont)) -> right <$> return (B , v , \b -> bindF (cont b) f)
     }
 
+PropList : (Set -> Set) -> Set -> Set
+PropList M A = List (Sigma Set \B -> (A -> Maybe B) -x- (B -> M T))
+
 PropPtrCont : (Set -> Set) -> Set -> Set
-PropPtrCont M A =  A -x- List (Sigma Set \B -> (A -> Maybe B) -x- (B -> M T))
+PropPtrCont M A =  A -x- PropList M A
 
 SpecK : (Set -> Set) -> (Set -> Set) -> Set -> Set
 SpecK K M B = Sigma Set \A -> (B === PropPtrCont M A) -x- K A
+
+getPropPointer : {{K derives BoundedMeetSemilattice}} -> TVar (SpecK K M) V A -> TVar (SpecK K M) V (PropList M A)
+getPropPointer {K} {M} {V} {A} {{lat}} (TVarC OrigT {{OT , refl , k}} (to <,> from) OVar) = TVarC OrigT {{(OT , refl , k)}} (to' <,> from') OVar
+  where
+    to' : OrigT -> Maybe (PropList M A)
+    to' (_ , props) = just $ flip map props \{
+                        (B' , threshold , act) -> B' , threshold o fst o from , act
+                      }
+    from' : PropList M A -> PropPtrCont M OT
+    from' lst = top , map (\{(B' , threshold , act) -> B' , (\m -> _>>=_ {M = Maybe} m threshold) o to o (_, []) , act }) lst
+      where
+        open BoundedMeetSemilattice (lat {{k}})
 
 SpecialFreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}} ->
   ThresholdVarMonad K (FNCDVarMon K (TVar (SpecK K M) V)) (TVar (SpecK K M) V)
