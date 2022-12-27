@@ -104,10 +104,8 @@ testBranchProps = flip runStdBranchingVarMonad read do
   v <- new
   fork $ read (eqThreshold 0 <bt$> v) >> write v 10
   branched \push -> fork $ do
-    --this verifies that the branching state is kept.
-    --The read definitely blocks, so if we had restarted the state here, the 20 would be written into orig.
     write v 5
-    read (leqThreshold 5 <bt$> v)
+    read (leqThreshold 6 <bt$> v)
     push (write v 15)
   return v
 
