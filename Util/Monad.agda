@@ -30,6 +30,14 @@ module _ {M : Set -> Set} {{mon : Monad M}} where
       loop' [] f b0 = return b0
       loop' (x :: lst) f b0 = f x b0 >>= loop' lst f
 
+  forMExcludeSelf : List A -> (List A -> A -> M B) -> M (List B)
+  forMExcludeSelf = forMExcludeSelf' []
+    where
+      forMExcludeSelf' : List A -> List A -> (List A -> A -> M B) -> M (List B)
+      forMExcludeSelf' _ [] _ = return []
+      forMExcludeSelf' prev (x :: xs) f =
+        (| (f (prev ++ xs) x) :: (forMExcludeSelf' (prev ++ [ x ]) xs f) |)
+
 record MonadTrans (MT : (Set -> Set) -> Set -> Set) : Set where
   field
     liftT : {{mon : Monad M}} -> M A -> MT M A
