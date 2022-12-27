@@ -20,13 +20,15 @@ module _ {{bvm : BranchingVarMonad K M V VS}} {{mf : MonadFork M}} {{kt : K (Tri
 
   disjunctSuccFail : List (M T -x- M T -x- Sigma Set (\A -> M A -x- (A -> M T))) -> M T -> M T
   disjunctSuccFail psbs fail = do
-    withFailVars <- forM psbs (\x -> (| (_, x) new |) )
+    withFailVars <- forM psbs $ \x -> do
+      v <- new
+      return (eqThreshold trivbot <bt$> v , x) 
     forMExcludeSelf withFailVars \{others (vf , m , mfail , _ , mresprep , mres) -> do
       branched $ \push -> do
         fork $ m
         fork $ mfail >> push (write vf trivbot)
         fork $ do
-          forM (map fst others) (read o (eqThreshold trivbot <bt$>_))
+          forM (map fst others) read
           mresprep >>= push o mres
       }
-    fork $ forM (map fst withFailVars) (read o (eqThreshold trivbot <bt$>_)) >> fail
+    fork $ forM (map fst withFailVars) read >> fail
