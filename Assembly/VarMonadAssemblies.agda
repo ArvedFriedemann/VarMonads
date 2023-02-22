@@ -72,16 +72,6 @@ instance
     sl = record { _<>_ = max } ;
     neut = 0 } }
 
-  {-}
-  stdKTup : {{ka : stdK A}} -> {{kb : stdK B}} -> stdK (A -x- B)
-  stdKTup {{ka}} {{kb}} = {!!}
-
-  stdKMaybe : stdK (Maybe A)
-  stdKMaybe = {!!}
-
-  stdKMap : {{isto : ISTO A}} -> stdK (Map A B)
-  stdKMap = {!!}
-  -}
 
 stdLatMon = BaseVarMonad=>ConstrVarMonad {K = stdK} {{defaultVarMonad}}
 
@@ -192,49 +182,4 @@ runStdBranchingVarMonad = runReadoutPropagation (\m -> propagateSFTVM (m []) >>=
       _ = BaseVarMonad.mon defaultVarMonad
       _ = MonadMaybe
 
--- runStdBranchingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
--- runStdBranchingVarMonad m r = runDefVarMonad $ propagateNormal {M = defaultVarMonadStateM} {{mon = MonadStateTId}} id (propagateL m >>= propagateL o r) --TODO! fix read executed before end of propagation!
---     where
---       instance
---         _ = BaseVarMonad.mon defaultVarMonad
---
---         _ : forall {M} -> Monad (MaybeT (FMFT M))
---         _ = MonadMaybeT {{FMFTMonad}}
---
---         _ = MonadTransStateT
---         _ = stdSpecModifyVarMonad
---         _ = FMFTMonadFork
---
---         stdmon : Monad (stdSpecMonad)
---         stdmon = FMFTMonad
---
---         _ = MonadFNCDVarMon
---
---       stdMT : Monad (MaybeT stdSpecMonad)
---       stdMT = MonadMaybeT {{stdmon}}
---
---       open MonadTrans {{...}}
---
---       defaultVarMonadStateMonad : Monad (defaultVarMonadStateM)
---       defaultVarMonadStateMonad = it
---
---       propagateL : forall {A} -> stdBranchingVarMonadM A -> MaybeT stdSpecMonad A
---       propagateL m = propagateInterrupted (\m cont -> runFNCD (fst <$> (m [])) cont) m
---
---       subrun = (_>>=_ {{r = stdMT}} (propagateL m) (propagateL o r))
 
-
-
-
-{-NOTES on problems:
-
-this does not work as the propagation from the forking monad just puts the actions after each other.
-When doing that with the continuation monad, that does not work because it might get stuck in a fork,
-but then delays all subsequent computation as well, even though that should be independent...
-
-runStdForkingVarMonad : stdBranchingVarMonadM B -> (B -> stdBranchingVarMonadM A) -> Maybe A
-runStdForkingVarMonad m r = runDefVarMonad $
-                              propagate $
-                              runFNCD {M = stdSpecMonad}
-                                (fst <$> (propagate m >>= propagate o r) [])
--}
