@@ -102,7 +102,7 @@ leqThreshold n = (\n' -> ifDec n <? n' then just n else nothing) <,> id
 testBranchProps : Maybe Nat
 testBranchProps = flip runStdBranchingVarMonad read do
   v <- new
-  fork $ read (eqThreshold 5 <bt$> v) >> write v 10
+  fork $ read (eqThreshold 0 <bt$> v) >> write v 10
   branched \push -> fork $ do
     write v 5
     read (leqThreshold 6 <bt$> v)
