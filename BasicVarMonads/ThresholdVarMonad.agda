@@ -7,7 +7,7 @@ open import AgdaAsciiPrelude.Instances
 open import BasicVarMonads.ConstrainedVarMonad
 open import Util.Derivation
 open import Util.Lattice
---open import Debug.Trace
+--open import .Trace
 
 private
   variable
@@ -93,8 +93,6 @@ FreeThresholdVarMonad : {{K derives Eq}} -> {{K derives BoundedMeetSemilattice}}
 FreeThresholdVarMonad = record {
   cvm = FNCDVarMonNewConstrDefVarMonad ;
   tvbf = TVarBijTFunctor }
-
-open import Debug.Trace
 
 ThresholdVarMonad=>ConstrDefVarMonad : {{tvm : ThresholdVarMonad K M V}} -> ConstrDefVarMonad K M V
 ThresholdVarMonad=>ConstrDefVarMonad {{tvm}} = record {

@@ -2,6 +2,13 @@ module AllImports where
 
 import AgdaAsciiPrelude.AsciiPrelude
 
+import Assembly.Examples
+import Assembly.ForkExamples
+import Assembly.Main
+import Assembly.StdVarMonad
+import Assembly.VarMonadAssemblies
+
+import BasicVarMonads.Pointers.PolyVars
 import BasicVarMonads.BaseVarMonad
 import BasicVarMonads.ConstrainedVarMonad
 import BasicVarMonads.Constructions
@@ -9,17 +16,21 @@ import BasicVarMonads.LatticeVarMonad
 import BasicVarMonads.ModifyVarMonad
 import BasicVarMonads.ThresholdVarMonad
 
-import Assembly.Examples
-import Assembly.ForkExamples
-import Assembly.Main
-import Assembly.StdVarMonad
-import Assembly.VarMonadAssemblies
-
 import MiscMonads.ConcurrentMonad
 
---import MTC.FunctorToolkit
+import MTC.FunctorToolkit.FunctorToolkit
+import MTC.FunctorToolkit.Tests
 import MTC.MTCBijective
 import MTC.MTCCasual
 --import MTC.MTCExperimental
 import MTC.MTCMendler
 import MTC.VarMonadFolds
+
+import SpecialVarMonads.Propagators.BasicPropagators
+import SpecialVarMonads.Propagators.Unification
+import SpecialVarMonads.BranchingVarMonad
+import SpecialVarMonads.ClauseLearningVarMonad
+import SpecialVarMonads.Combinators
+import SpecialVarMonads.FixedValueVarMonad
+import SpecialVarMonads.LatticeClauseLearningVarMonad
+import SpecialVarMonads.PropagatorConstruction
