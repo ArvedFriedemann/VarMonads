@@ -1,0 +1,24 @@
+Notes on how to implement the general theory of solving.
+
+Lattice Based Solving:
+    - Strictly increasing model first
+    - Unit Propagation as fixpoint
+    - Branching as recursive Call
+    - Clause Learning as information increase (and propagation of propagators)
+    - decreasing model for memory management later
+    Needed Lattices:
+    - Assignment Lattice
+    - "New" operation
+    - Retrieve propagation function from lattice state
+    - Branching shenanigans
+    - Fixpoint-listeners?
+    Connection to VarMonads:
+    - VarMonads for each of these Lattices
+    Data:
+    - Functors for Lambda Calculus
+    - Framework to run Lambda Calculus on VarMonads
+    - Framework to express TypeTheory on Lambda Calculus basis in VarMonads
+    Proofs:
+    - Reason about current state
+    - Probability Theory
+    
