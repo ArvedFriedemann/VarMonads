@@ -4,63 +4,76 @@ module GeneralTheory.GeneralTheory where
 open import AgdaAsciiPrelude.AsciiPrelude
 open import Util.Lattice
 open import MTC.MTCMendler
+open import AgdaAsciiPrelude.Instances
 
 private
   variable 
-    L : Set
-{-
-record PropLat (L : Set) : Set where
-  constructor PL
-  field
-    content : L
-    props : L -> L
--}
+    L A B C : Set
 
-{-
 record PropLat (L : Set) : Set where
   field
-    inj-prop : (L -> L) -> L
-    proj-prop : L -> (L -> L)
-
-    -- property : forall l -> let l' = (inj-prop f) /\ l in (proj-prop l') l' leq f l'
+    withProp : (L -> L) -> L
+    getProps : L -> (L -> L)
+    {- 
+    properties:
+    getProps o withProp = id
+    withProp o getProps = id
+    -}
 
 open PropLat {{...}}
 
+
 {-# TERMINATING #-}
-propagate : {{PropLat L}} -> {{Eq L}} -> L -> L
-propagate l with l' <- (proj-prop l) l | l == l'
-...| true = l
+propagate : {{Eq L}} -> {{PropLat L}} -> L -> L
+propagate l with l' <- (getProps l) l | l == l'
+...| true = l'
 ...| false = propagate l'
--}
 
-{-# NO_POSITIVITY_CHECK #-}
-record PropLat (L : Set) : Set where
-  constructor PL 
+record TFunc (L A : Set) : Set where
+  constructor _tf_
   field
-    content : L
-    propagator : (PropLat L -> PropLat L)
+    from : L -> Maybe A
+    to : A -> L
 
-open BoundedLattice{{...}}
+_o-tf_ : TFunc B C -> TFunc A B -> TFunc A C
+(bc tf cb) o-tf (ab tf ba) = (ab >=> bc) tf (ba o cb)
+  where 
+    instance 
+      _ = MonadMaybe
 
-{-# TERMINATING #-}
-PL-meet : {{BoundedLattice L}} -> PropLat L -> PropLat L -> PropLat L
-PL-meet (PL c1 p1) (PL c2 p2) = PL (c1 /\ c2) (\ x -> PL-meet (p1 x) (p2 x))
+record NewLat (L : Set) : Set where
+  field
+    new : {A : Set} -> L -> TFunc L A -x- L
 
-PL-top : {{BoundedLattice L}} -> PropLat L
-PL-top = PL top id
+open NewLat{{...}}
 
-{-# TERMINATING #-}
-PL-join : {{BoundedLattice L}} -> PropLat L -> PropLat L -> PropLat L
-PL-join (PL c1 p1) (PL c2 p2) = PL (c1 \/ c2) (\ x -> PL-join (p1 x) (p2 x))
+record BranchLat (L : Set) : Set where
+  field
+    mkBranch : L -> TFunc L L -x- L
 
-PL-bot : {{BoundedLattice L}} -> PropLat L
-PL-bot = PL bot id
+open import Util.Lattice
+open BoundedMeetSemilattice {{...}}
 
-PropLatLattice : {{BoundedLattice L}} -> BoundedLattice (PropLat L)
-PropLatLattice = record { 
-  meet-bsl = record { bsl = record { 
-    sl = record { _<>_ = PL-meet } ; 
-    neut = PL top (const PL-top) } } ; 
-  join-bsl = record { bsl = record { 
-    sl = record { _<>_ = PL-join } ; 
-    neut = PL-bot } } }
+add : {{BoundedMeetSemilattice L}} -> L -> StateT L id T
+add = modify o _/\_
+  where 
+    open MonadState{{...}} using (modify)
+    instance
+      _ = MonadStateStateTId
+
+
+NewLat=>BranchLat : 
+  {{NewLat L}} -> 
+  {{PropLat L}} -> 
+  {{BoundedMeetSemilattice L}} ->
+  BranchLat L
+NewLat=>BranchLat {L} = record { 
+  mkBranch = do
+    (f tf t) <- new {A = L}
+    add (withProp t)
+    return (f tf t)
+  }
+  where 
+    instance 
+      _ = MonadStateTId
+      _ = MonadStateStateTId
