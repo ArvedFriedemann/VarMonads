@@ -9,6 +9,7 @@ open import AgdaAsciiPrelude.Instances
 private
   variable 
     L A B C : Set
+    K : Set -> Set
 
 record PropLat (L : Set) : Set where
   field
@@ -41,11 +42,11 @@ _o-tf_ : TFunc B C -> TFunc A B -> TFunc A C
     instance 
       _ = MonadMaybe
 
-record NewLat (L : Set) : Set where
+record ConNewLat (K : Set -> Set) (L : Set) : Set where
   field
-    new : {A : Set} -> L -> TFunc L A -x- L
+    new : {A : Set} -> {{k : K A}} -> L -> TFunc L A -x- L
 
-open NewLat{{...}}
+open ConNewLat{{...}}
 
 record BranchLat (L : Set) : Set where
   field
@@ -62,12 +63,13 @@ add = modify o _/\_
       _ = MonadStateStateTId
 
 
-NewLat=>BranchLat : 
-  {{NewLat L}} -> 
+ConNewLat=>BranchLat : 
+  {{ConNewLat K L}} -> 
   {{PropLat L}} -> 
   {{BoundedMeetSemilattice L}} ->
+  {{K L}} ->
   BranchLat L
-NewLat=>BranchLat {L} = record { 
+ConNewLat=>BranchLat {L = L} = record { 
   mkBranch = do
     (f tf t) <- new {A = L}
     add (withProp t)
