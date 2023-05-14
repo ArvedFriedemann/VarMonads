@@ -5,6 +5,9 @@ open import AgdaAsciiPrelude.AsciiPrelude
 open import Util.Lattice
 open import MTC.MTCMendler
 open import AgdaAsciiPrelude.Instances
+open import Util.Derivation
+open import MTC.FunctorToolkit.FunctorToolkit renaming (C to KC; K to KK)
+
 
 private
   variable 
@@ -48,6 +51,32 @@ record ConNewLat (K : Set -> Set) (L : Set) : Set where
 
 open ConNewLat{{...}}
 
+
+
+data FreeConSOPF (K : Set -> Set) (R : Set) : Set where
+  FK : {A : Set} -> {{K A}} -> FreeConSOPF K R
+  _F:*:_ : R -> R -> FreeConSOPF K R
+  _F:+:_ : R -> R -> FreeConSOPF K R
+
+FreeConSOP : (K : Set -> Set) -> Set
+FreeConSOP K = Fix $ FreeConSOPF K
+
+[_]func : FreeConSOP K -> Set -> Set
+[_]func = foldF \{
+    [[_]] (FK {A}) -> KK A
+  ; [[_]] (a F:*: b) -> [[ a ]] :*: [[ b ]]
+  ; [[_]] (a F:+: b) -> [[ a ]] :+: [[ b ]]}
+
+record SOPNewLat (K : Set -> Set) (L : Set) : Set where
+  field
+    new : (F : FreeConSOP K) -> State L (Fix [ F ]func )
+
+
+
+
+
+
+
 record BranchLat (L : Set) : Set where
   field
     mkBranch : L -> TFunc L L -x- L
@@ -55,7 +84,7 @@ record BranchLat (L : Set) : Set where
 open import Util.Lattice
 open BoundedMeetSemilattice {{...}}
 
-add : {{BoundedMeetSemilattice L}} -> L -> StateT L id T
+add : {{BoundedMeetSemilattice L}} -> L -> State L T
 add = modify o _/\_
   where 
     open MonadState{{...}} using (modify)
